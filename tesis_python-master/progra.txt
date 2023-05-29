@@ -1,0 +1,33 @@
+ENTRADA 
+-archivo STL
+-archivo .vert y .face
+
+(c)Cálculo de SES empleando MSMS: Es utilizado el programa MSMS con cada proteína
+para obtener la triangulación del SES, compuesta por dos archivos; un archivo .vert que
+contiene las coordenadas de todos los vértices y, un archivo .face que contiene los índices
+de los vértices de cada triángulo, además de indicar a qué tipo de cara corresponde (de
+contacto, re-entrante o toroidal).
+
+(d) Obtención de posibles puntos de contacto físico: Una vez conseguidos los archivos
+.vert y .face se realiza el procesamiento en Python, descartando todas aquellas caras de
+tipo toroidal, quedando sólo las de contacto y re-entrantes. A estas caras restantes se les
+calcula su centroide.
+
+
+
+1. lectura de caras y vertices a partir de los archivos .vert y .face
+2. descarte de caras toroidales
+3. calculo de centroides de las caras de tipo re entrante y de contacto
+4. generacion de las coordenadas de los rayos de contexto para cada centroide
+5. division de cada rayo en 15 segmentos de igual longitud 
+6. evaluacion de las ocho formas de contexto determinando si cada segmento se 
+encuentra dentro o fuera de la forma de contexto analizada.
+Para esto se compara con la superfiica obteida en el archivo STL
+
+
+SALIDA
+- archivo .txt por cada forma de contexto
+- archivo .txt con las coordenadas de cada centroide
+
+RESULTADO 
+formas de contexto en python
