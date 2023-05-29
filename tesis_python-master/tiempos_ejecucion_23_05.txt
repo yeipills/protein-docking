@@ -1,0 +1,13 @@
+nombreProteina='1AHW_r_u'
+Duration script 1: 0.7442s
+Duration script 2: 0.8687s
+Duration script 3: 353.6066s---count 294
+Duration script4: 2677.5728s ---rayo 442499
+Duration script 5: 14.2648s
+
+nombreProteina='1AHW_l_u'
+Duration script 1: 0.0749s
+Duration script 2: 0.1288s
+Duration script 3: 160.2911s----count 159
+Duration script4: 622.9114s ----rayo 239999
+Duration script 5: 7.8013s
