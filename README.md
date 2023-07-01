@@ -22,6 +22,7 @@ Aquí encontrarás los pasos necesarios para instalar las siguientes dependencia
      pip install fastapi
      pip install aiofiles
      pip install requests
+     pip install scipy
      ```
 
 Una vez que hayas completado estos pasos, habrás instalado todas las dependencias necesarias en VS Code. Ahora podrás utilizar estas bibliotecas en tus proyectos de Python en el entorno de desarrollo de VS Code.
