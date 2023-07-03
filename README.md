@@ -87,27 +87,28 @@ La aplicación ahora debería estar accesible en `http://localhost:5000`.
 ## Dockerfile para Node.js
 
 ```Dockerfile
-# pull official base image
+# Utiliza una imagen base oficial de Node.js
 FROM node:18.16.1-buster
 
-# set working directory in the container
+# Establece el directorio de trabajo en el contenedor a /app
 WORKDIR /app
 
-# copy package.json and package-lock.json to working dir
+# Copia package.json y package-lock.json al directorio de trabajo
 COPY /package*.json ./
 
-# install app dependencies
+# Instala las dependencias de la aplicación
 RUN npm install -g npm@9.7.2 --silent
 RUN npm install --silent
 
-# copy the app code to the container
+# Copia el código de la aplicación al contenedor
 COPY . /app
 
-# Expose the port the app runs in
+# Expone el puerto en el que se ejecuta la aplicación
 EXPOSE 3000
 
-# start the app
+# Inicia la aplicación
 CMD ["npm", "run", "start"]
+
 ```
 
 Para construir y ejecutar el contenedor Docker para la aplicación Node.js, siga estos pasos:
