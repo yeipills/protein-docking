@@ -40,7 +40,7 @@ Este README proporciona instrucciones paso a paso sobre cómo construir y ejecut
 
 ## Dockerfile para Python FastAPI (uvicorn)
 
-```
+```Dockerfile
 # Utiliza una versión oficial de Python como imagen base
 FROM python:3.11.4
 
