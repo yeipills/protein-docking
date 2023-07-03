@@ -7,6 +7,36 @@ import { ProgressSpinner } from "primereact/progressspinner";
 import { InputText } from "primereact/inputtext";
 import toast from "react-hot-toast";
 
+// Define los estilos en un objeto fuera del componente de renderizado
+const styles = {
+    centeredContainer: {
+        display: "flex",
+        justifyContent: "center"
+    },
+    flexContainer: {
+        display: "flex"
+    },
+    flexColumn: {
+        display: "flex",
+        flexDirection: "column"
+    },
+    spacedContainer: {
+        display: "flex",
+        justifyContent: "space-around"
+    },
+    dropzone: {
+        width: "45%"
+    },
+    card: {
+        textAlign: "center"
+    },
+    input: {
+        width: "60%",
+        margin: "auto",
+        marginBottom: "5%"
+    }
+};
+
 const ParteDos = ({
     socket,
     fileOne,
@@ -65,60 +95,42 @@ const ParteDos = ({
         formData.append("crTotales", fileOne[0]);
         formData.append("rayosContexto", fileTwo[0]);
 
-        const response = await fetch(`${urlBack}/cargarParteDos`, {
-            method: "POST",
-            body: formData,
-        });
-        await response.json();
-        toast.success("Archivos cargados correctamente", {
-            duration: 4000,
-            position: "top-right",
-        });
+        try {
+            const response = await fetch(`${urlBack}/cargarParteDos`, {
+                method: "POST",
+                body: formData,
+            });
+            if (!response.ok) {
+                throw new Error('Error al cargar los archivos');
+            }
+            await response.json();
+            toast.success("Archivos cargados correctamente", {
+                duration: 4000,
+                position: "top-right",
+            });
+        } catch (error) {
+            toast.error(error.message, {
+                duration: 4000,
+                position: "top-right",
+            });
+        }
     };
 
     return (
         <>
-            <div
-                style={{
-                    display: "flex",
-                    justifyContent: "center",
-                    marginTop: "4%",
-                }}
-            >
+            <div style={{...styles.centeredContainer, marginTop: "4%"}}>
                 <BlockUI blocked={procesando} template={<ProgressSpinner />}>
-                    <Card
-                        title="Evaluación de capas"
-                        footer={footer}
-                        style={{
-                            textAlign: "center",
-                        }}
-                    >
-                        <div
-                            style={{
-                                display: "flex",
-                                flexDirection: "column",
-                            }}
-                        >
+                    <Card title="Evaluación de capas" footer={footer} style={styles.card}>
+                        <div style={styles.flexColumn}>
                             <InputText
-                                style={{
-                                    width: "60%",
-                                    margin: "auto",
-                                    marginBottom: "5%",
-                                }}
+                                style={styles.input}
                                 placeholder="Nombre proteína"
                                 value={nombreProteina}
-                                onChange={(e) =>
-                                    setNombreProteina(e.target.value)
-                                }
+                                onChange={(e) => setNombreProteina(e.target.value)}
                             />
                         </div>
-                        <div
-                            style={{
-                                display: "flex",
-                                justifyContent: "space-around",
-                            }}
-                        >
-                            <div style={{ width: "45%" }}>
+                        <div style={styles.spacedContainer}>
+                            <div style={styles.dropzone}>
                                 <CustomDropzone
                                     chipLabel="CR Totales"
                                     file={fileOne}
@@ -126,7 +138,7 @@ const ParteDos = ({
                                     acceptedFile=".txt"
                                 />
                             </div>
-                            <div style={{ width: "45%" }}>
+                            <div style={styles.dropzone}>
                                 <CustomDropzone
                                     chipLabel="Rayos contexto"
                                     file={fileTwo}
@@ -138,13 +150,7 @@ const ParteDos = ({
                     </Card>
                 </BlockUI>
             </div>
-            <div
-                style={{
-                    display: "flex",
-                    justifyContent: "center",
-                    marginTop: "2%",
-                }}
-            >
+            <div style={{...styles.centeredContainer, marginTop: "2%"}}>
                 {finalizado && (
                     <Card>
                         <Button onClick={handleDownloadFiles}>
