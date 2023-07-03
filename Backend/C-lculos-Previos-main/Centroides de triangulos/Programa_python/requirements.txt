@@ -1,0 +1,12 @@
+numpy
+Cython
+trimesh
+fastapi
+aiofiles
+requests
+scipy
+cythonizer
+uvicorn
+python-multipart
+emit
+flask-cors

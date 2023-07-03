@@ -6,6 +6,7 @@ import { BlockUI } from "primereact/blockui";
 import { ProgressSpinner } from "primereact/progressspinner";
 import { Divider } from "primereact/divider";
 import toast from "react-hot-toast";
+import './ParteUno.css';
 
 const ParteUno = ({
     socket,
@@ -40,7 +41,7 @@ const ParteUno = ({
             <Button
                 label="Subir"
                 icon="pi pi-check"
-                style={{ marginRight: ".25em", width: "27%" }}
+                className="button"
                 disabled={
                     !fileOne.length || !fileVertice.length || !fileFace.length
                 }
@@ -49,8 +50,7 @@ const ParteUno = ({
             <Button
                 label="Cancelar"
                 icon="pi pi-times"
-                className="p-button-secondary"
-                style={{ marginLeft: ".25em", width: "27%" }}
+                className="p-button-secondary button"
                 onClick={() => {
                     setFileOne([]);
                     setFileVertice([]);
@@ -80,27 +80,14 @@ const ParteUno = ({
 
     return (
         <>
-            <div
-                style={{
-                    display: "flex",
-                    justifyContent: "center",
-                    marginTop: "4%",
-                }}
-            >
+            <div className="upload-container">
                 <BlockUI blocked={procesando} template={<ProgressSpinner />}>
                     <Card
                         title="Lectura de caras y vértices"
                         footer={footer}
-                        style={{
-                            textAlign: "center",
-                        }}
+                        className="card"
                     >
-                        <div
-                            style={{
-                                display: "flex",
-                                justifyContent: "space-around",
-                            }}
-                        >
+                        <div className="upload-row">
                             <div style={{ width: "45%" }}>
                                 <CustomDropzone
                                     chipLabel="Vertices proteina"
@@ -119,12 +106,7 @@ const ParteUno = ({
                             </div>
                         </div>
                         <Divider />
-                        <div
-                            style={{
-                                display: "flex",
-                                justifyContent: "space-around",
-                            }}
-                        >
+                        <div className="upload-row">
                             <div style={{ width: "45%" }}>
                                 <CustomDropzone
                                     chipLabel="Archivo STL"
@@ -140,14 +122,7 @@ const ParteUno = ({
                     </Card>
                 </BlockUI>
             </div>
-            <div
-                style={{
-                    display: "flex",
-                    justifyContent: "center",
-                    marginTop: "2%",
-                    marginBottom: "2%",
-                }}
-            >
+            <div className="download-container">
                 {finalizado && (
                     <Card>
                         <Button onClick={handleDownloadFiles}>

@@ -1,8 +1,8 @@
-import { Card } from "primereact/card";
-import React from "react";
-import { useDropzone } from "react-dropzone";
+import React, { useCallback } from 'react';
+import { useDropzone } from 'react-dropzone';
 import { Tag } from "primereact/tag";
 import { Chip } from "primereact/chip";
+import { Card } from "primereact/card";
 import { BlockUI } from "primereact/blockui";
 
 const CustomDropzone = ({
@@ -10,81 +10,57 @@ const CustomDropzone = ({
     setFile,
     chipLabel,
     blocked = false,
-    acceptedFile = "*",
+    acceptedFile = '*',
 }) => {
-    const { acceptedFiles, getRootProps, getInputProps } = useDropzone({
-        getFilesFromEvent: (event) => myCustomFileGetter(event),
-        accept: {
-            acceptedFile: [acceptedFile],
-        },
+    const onDrop = useCallback((acceptedFiles) => {
+        setFile(acceptedFiles);
+    }, [setFile]);
+
+    const { getRootProps, getInputProps } = useDropzone({
+        onDrop,
+        accept: acceptedFile,
     });
 
-    function nameLengthValidator(file) {
-        if (file.name.length > maxLength) {
-            return {
-                code: "name-too-large",
-                message: `Name is larger than ${maxLength} characters`,
-            };
-        }
+    const removeFile = () => setFile([]);
 
-        return null;
-    }
+    const dropZoneContent = (
+        <Card style={{ textAlign: 'center' }}>
+            <input {...getInputProps()} />
+            <p>Arrastra o clickea para cargar</p>
+        </Card>
+    );
 
-    async function myCustomFileGetter(event) {
-        const files = [];
-        const fileList = event.dataTransfer
-            ? event.dataTransfer.files
-            : event.target.files;
+    const blockUIContent = (
+        <BlockUI
+            blocked={file.length || blocked}
+            template={<i className="pi pi-lock" style={{ fontSize: '3rem' }} />}
+        >
+            {dropZoneContent}
+        </BlockUI>
+    );
 
-        for (var i = 0; i < fileList.length; i++) {
-            const file = fileList.item(i);
-
-            Object.defineProperty(file, "myProp", {
-                value: true,
-            });
-
-            files.push(file);
-        }
-        setFile(files);
-        return files;
-    }
+    const chips = file.map((item, key) => (
+        <Chip
+            key={key}
+            style={{ marginTop: '5%' }}
+            label={item.name}
+            removable
+            onRemove={removeFile}
+        />
+    ));
 
     return (
         <>
             <Tag
                 key={chipLabel}
-                style={{ marginBottom: "5%" }}
+                style={{ marginBottom: '5%' }}
                 value={chipLabel}
-                className="mr-2"
                 rounded
             />
-            <BlockUI
-                blocked={file.length || blocked}
-                template={
-                    <i className="pi pi-lock" style={{ fontSize: "3rem" }} />
-                }
-            >
-                <div {...getRootProps({ className: "dropzone" })}>
-                    <Card
-                        style={{
-                            textAlign: "center",
-                        }}
-                        disabled
-                    >
-                        <input {...getInputProps()} />
-                        <p>Arrastra o clickea para cargar</p>
-                    </Card>
-                </div>
-            </BlockUI>
-            {file.map((item, key) => (
-                <Chip
-                    key={key}
-                    style={{ marginTop: "5%" }}
-                    label={item.name}
-                    removable
-                    onRemove={() => setFile([])}
-                />
-            ))}
+            <div {...getRootProps({ className: 'dropzone' })}>
+                {blockUIContent}
+            </div>
+            {chips}
         </>
     );
 };
