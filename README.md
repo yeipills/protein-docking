@@ -16,14 +16,19 @@ Aquí encontrarás los pasos necesarios para instalar las siguientes dependencia
    - Abre una nueva terminal en VS Code (puedes hacerlo desde el menú `Terminal` -> `Nueva terminal` o usando el atajo de teclado `Ctrl + ` `).
    - En la terminal, ejecuta los siguientes comandos, uno por uno, para instalar las bibliotecas:
      ```
-     pip install numpy
-     pip install Cython
-     pip install trimesh
-     pip install fastapi
-     pip install aiofiles
-     pip install requests
-     pip install scipy
-     pip install cythonizer
+      pip install numpy
+      pip install Cython
+      pip install trimesh
+      pip install fastapi
+      pip install aiofiles
+      pip install requests
+      pip install scipy
+      pip install cythonizer
+      pip install uvicorn
+      pip install python-multipart
+      pip install emit
+      pip install flask-cors
+
      ```
 
 Una vez que hayas completado estos pasos, habrás instalado todas las dependencias necesarias en VS Code. Ahora podrás utilizar estas bibliotecas en tus proyectos de Python en el entorno de desarrollo de VS Code.
