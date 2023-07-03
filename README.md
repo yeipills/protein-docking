@@ -40,29 +40,29 @@ Este README proporciona instrucciones paso a paso sobre cómo construir y ejecut
 
 ## Dockerfile para Python FastAPI (uvicorn)
 
-```Dockerfile
-# Use an official Python runtime as a parent image
+```
+# Utiliza una versión oficial de Python como imagen base
 FROM python:3.11.4
 
-# Set the working directory in the container to /app
+# Establece el directorio de trabajo en el contenedor a /app
 WORKDIR /app
 
-# Add the current directory contents into the container at /app
+# Añade el contenido del directorio actual en el contenedor en /app
 ADD . /app
 
-# Install any needed packages specified in requirements.txt
+# Instala los paquetes necesarios especificados en requirements.txt
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Run setup.py
+# Ejecuta setup.py
 RUN python setup.py build_ext --inplace
 
-# Make port 5000 available to the world outside this container
+# Hace disponible el puerto 5000 al mundo exterior de este contenedor
 EXPOSE 5000
 
-# Define environment variable
+# Define la variable de entorno
 ENV NAME World
 
-# Run uvicorn when the container launches
+# Ejecuta uvicorn cuando se lanza el contenedor
 CMD ["uvicorn", "server:app", "--reload", "--host", "0.0.0.0", "--port", "5000"]
 ```
 
