@@ -11,8 +11,8 @@ COPY /package*.json ./
 RUN npm install -g npm@9.7.2 --silent
 RUN npm install --silent
 
-# Install three.js and three-stdlib
-RUN npm install three three-stdlib --silent
+# Install three.js, three-stdlib, and styled-components
+RUN npm install three three-stdlib styled-components --silent
 
 # copy the app code to the container
 COPY . /app

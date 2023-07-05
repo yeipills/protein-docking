@@ -4,6 +4,24 @@ import { Tag } from "primereact/tag";
 import { Chip } from "primereact/chip";
 import { Card } from "primereact/card";
 import { BlockUI } from "primereact/blockui";
+import styled from 'styled-components';
+
+// Aquí creas componentes con estilos personalizados
+const StyledCard = styled(Card)`
+  background-color: #ffffff; // Cambia a tu color de preferencia
+  color: black; // Cambia a tu color de preferencia
+  text-align: center;
+`;
+
+const StyledTag = styled(Tag)`
+  background-color: #727272; // Cambia a tu color de preferencia
+  color: white; // Cambia a tu color de preferencia
+`;
+
+const StyledChip = styled(Chip)`
+    background-color: green; // Cambia a tu color de preferencia
+    color: white; // Cambia a tu color de preferencia
+`;
 
 const CustomDropzone = ({
     file,
@@ -24,10 +42,10 @@ const CustomDropzone = ({
     const removeFile = () => setFile([]);
 
     const dropZoneContent = (
-        <Card style={{ textAlign: 'center' }}>
+        <StyledCard>
             <input {...getInputProps()} />
-            <p>Arrastra o clickea para cargar</p>
-        </Card>
+            <p>Haga clic o arrastre los archivos aquí</p>
+        </StyledCard>
     );
 
     const blockUIContent = (
@@ -40,7 +58,7 @@ const CustomDropzone = ({
     );
 
     const chips = file.map((item, key) => (
-        <Chip
+        <StyledChip
             key={key}
             style={{ marginTop: '5%' }}
             label={item.name}
@@ -51,7 +69,7 @@ const CustomDropzone = ({
 
     return (
         <>
-            <Tag
+            <StyledTag
                 key={chipLabel}
                 style={{ marginBottom: '5%' }}
                 value={chipLabel}

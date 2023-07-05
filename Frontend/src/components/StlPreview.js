@@ -7,37 +7,55 @@ const StlPreview = ({ file }) => {
     const mountRef = useRef(null);
 
     useEffect(() => {
-        // Crear escena, cámara y renderer
+        // Si no hay archivo, no intentes renderizarlo
+        if (!file) {
+            return;
+        }
+
         const scene = new THREE.Scene();
         const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
         const renderer = new THREE.WebGLRenderer();
 
-        // Configurar tamaño del renderer y añadirlo al documento
-        renderer.setSize(800, 600);  // Ajusta estos valores según tus necesidades
+        renderer.setSize(800, 600);
         mountRef.current.appendChild(renderer.domElement);
 
-        // Añadir controles de órbita
         const controls = new OrbitControls(camera, renderer.domElement);
-        controls.enableZoom = true;  // Habilita el zoom
+        controls.enableZoom = true;
 
-        // Configurar luces y añadirlas a la escena
         const pointLight = new THREE.PointLight(0xffffff, 1, 0);
         pointLight.position.set(50, 50, 50);
         const ambientLight = new THREE.AmbientLight(0x404040);
         scene.add(pointLight, ambientLight);
 
-        // Cargar archivo STL
         const loader = new STLLoader();
         loader.load(URL.createObjectURL(file), (geometry) => {
-            const material = new THREE.MeshBasicMaterial({ color: 0x00ff00 });
+            const material = new THREE.MeshLambertMaterial({ color: 0x00ff00 });
             const mesh = new THREE.Mesh(geometry, material);
             scene.add(mesh);
+
+            const box = new THREE.Box3().setFromObject(mesh);
+            const size = box.getSize(new THREE.Vector3()).length();
+            const center = box.getCenter(new THREE.Vector3());
+
+            controls.reset();
+
+            mesh.position.x += mesh.position.x - center.x;
+            mesh.position.y += mesh.position.y - center.y;
+            mesh.position.z += mesh.position.z - center.z;
+            controls.update();
+
+            camera.position.copy(center);
+            camera.position.x += size / 2.0;
+            camera.position.y += size / 2.0;
+            camera.position.z += size / 2.0;
+            camera.near = size / 100;
+            camera.far = size * 100;
+            camera.updateProjectionMatrix();
+
+            camera.lookAt(center);
+
         });
 
-        // Configurar posición de la cámara
-        camera.position.z = 5;
-
-        // Crear loop de animación
         const animate = function () {
             requestAnimationFrame(animate);
             controls.update();
@@ -48,7 +66,9 @@ const StlPreview = ({ file }) => {
 
         // Función de limpieza
         return () => {
-            mountRef.current.removeChild(renderer.domElement);
+            if (mountRef.current && renderer) {
+                mountRef.current.removeChild(renderer.domElement);
+            }
         };
     }, [file]);
 
