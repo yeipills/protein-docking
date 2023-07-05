@@ -1,6 +1,7 @@
 import React from "react";
 import { Card } from "primereact/card";
 import CustomDropzone from "../components/CustomDropzone";
+import StlPreview from "../components/StlPreview";
 import { Button } from "primereact/button";
 import { BlockUI } from "primereact/blockui";
 import { ProgressSpinner } from "primereact/progressspinner";
@@ -82,44 +83,51 @@ const ParteUno = ({
         <>
             <div className="upload-container">
                 <BlockUI blocked={procesando} template={<ProgressSpinner />}>
-                    <Card
-                        title="Lectura de caras y vértices"
-                        footer={footer}
-                        className="card"
-                    >
-                        <div className="upload-row">
-                            <div style={{ width: "45%" }}>
-                                <CustomDropzone
-                                    chipLabel="Vertices proteina"
-                                    file={fileVertice}
-                                    setFile={setFileVertice}
-                                    acceptedFile=".vert"
-                                />
+                    <div style={{ display: "flex", justifyContent: "space-between" }}>
+                        <Card
+                            title="Lectura de caras y vértices"
+                            footer={footer}
+                            className="card"
+                        >
+                            <div className="upload-row">
+                                <div style={{ width: "45%" }}>
+                                    <CustomDropzone
+                                        chipLabel="Vertices proteina"
+                                        file={fileVertice}
+                                        setFile={setFileVertice}
+                                        acceptedFile=".vert"
+                                    />
+                                </div>
+                                <div style={{ width: "45%" }}>
+                                    <CustomDropzone
+                                        chipLabel="Caras proteina"
+                                        file={fileFace}
+                                        setFile={setFileFace}
+                                        acceptedFile=".face"
+                                    />
+                                </div>
                             </div>
-                            <div style={{ width: "45%" }}>
-                                <CustomDropzone
-                                    chipLabel="Caras proteina"
-                                    file={fileFace}
-                                    setFile={setFileFace}
-                                    acceptedFile=".face"
-                                />
+                            <Divider />
+                            <div className="upload-row">
+                                <div style={{ width: "45%" }}>
+                                    <CustomDropzone
+                                        chipLabel="Archivo STL"
+                                        file={fileOne}
+                                        setFile={setFileOne}
+                                        acceptedFile=".stl"
+                                        blocked={
+                                            !fileVertice.length || !fileFace.length
+                                        }
+                                    />
+                                </div>
                             </div>
-                        </div>
-                        <Divider />
-                        <div className="upload-row">
-                            <div style={{ width: "45%" }}>
-                                <CustomDropzone
-                                    chipLabel="Archivo STL"
-                                    file={fileOne}
-                                    setFile={setFileOne}
-                                    acceptedFile=".stl"
-                                    blocked={
-                                        !fileVertice.length || !fileFace.length
-                                    }
-                                />
-                            </div>
-                        </div>
-                    </Card>
+                        </Card>
+                        {fileOne.length > 0 && (
+                            <Card title="Vista previa del STL" style={{ marginLeft: "20px" }}>
+                                <StlPreview file={fileOne[0]} />
+                            </Card>
+                        )}
+                    </div>
                 </BlockUI>
             </div>
             <div className="download-container">
@@ -134,5 +142,4 @@ const ParteUno = ({
         </>
     );
 };
-
 export default ParteUno;
