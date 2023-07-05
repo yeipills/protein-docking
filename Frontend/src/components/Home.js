@@ -1,30 +1,20 @@
 import React from "react";
 import { Card } from "primereact/card";
-import bg from "../resources/bg.png";
+//import bg from "../resources/bg.jpeg";
 import ubb_logo from "../resources/ubb_logo.png";
 
 // Define los estilos en un objeto fuera del componente de renderizado
 const styles = {
-    flexContainer: {
-        display: "flex",
-        flexDirection: "row"
-    },
-    leftPane: {
-        width: "60%"
-    },
+
+
+
     rightPane: {
         height: "91.8%",
         width: "38%" ,
         marginLeft:"1%"
     },
-    background: {
-        backgroundImage: `url(${bg})`,
-        position: "absolute",
-        width: "60%",
-        height: "91.8%",
-        backgroundRepeat: "no-repeat",
-        backgroundPosition: "center",
-        backgroundSize: "cover"
+    backgroundColor: {
+        backgroundColor:"#3dc484",
     },
     logo: {
         marginLeft:"25%"
