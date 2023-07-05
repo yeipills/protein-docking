@@ -63,12 +63,18 @@ const ParteDos = ({
         console.log("descargado");
     };
 
+    const buttonStyles = {
+    backgroundColor: 'black',  // Cambia el color de fondo a azul
+    borderColor: 'black',      // Cambia el color del borde a rojo
+    color: 'white',          // Cambia el color del texto a blanco
+    marginLeft: ".5em", width: "27%"
+    };
     const footer = (
         <span>
             <Button
                 label="Subir"
                 icon="pi pi-check"
-                style={{ marginRight: ".25em", width: "27%" }}
+                style={buttonStyles}
                 disabled={
                     !fileOne.length || !fileTwo.length || !nombreProteina.length
                 }
@@ -78,7 +84,7 @@ const ParteDos = ({
                 label="Cancelar"
                 icon="pi pi-times"
                 className="p-button-secondary"
-                style={{ marginLeft: ".25em", width: "27%" }}
+                style= {buttonStyles}
                 onClick={() => {
                     setFileOne([]);
                     setFileTwo([]);
