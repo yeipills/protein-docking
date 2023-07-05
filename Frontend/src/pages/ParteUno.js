@@ -26,22 +26,33 @@ const ParteUno = ({
 }) => {
     const urlBack = process.env.REACT_APP_URL_BACKEND;
 
+    const buttonStyles = {
+        backgroundColor: 'black',  // Cambia el color de fondo a azul
+        borderColor: 'black',      // Cambia el color del borde a rojo
+        color: 'white',          // Cambia el color del texto a blanco
+        marginLeft: ".5em", width: "27%"
+    };
+
     const onSubmitFiles = () => {
+        if (!fileOne.length || !fileVertice.length || !fileFace.length) {
+            toast.error('Error: Todos los campos son obligatorios');
+            return;
+        }
+
+        const isFileTypeValid = (
+            fileOne[0].type === 'application/sla' &&
+            fileVertice[0].type === 'text/plain' &&
+            fileFace[0].type === 'text/plain'
+        );
+
+        if (!isFileTypeValid) {
+            toast.error('Error: Los tipos de archivo son incorrectos');
+            return;
+        }
+
         setFinalizado(false);
         setProcesando(true);
         uploadHandler();
-    };
-
-    const handleDownloadFiles = () => {
-        window.location.href = `${urlBack}/descargaParteUno`;
-        console.log("descargado");
-    };
-
-    const buttonStyles = {
-    backgroundColor: 'black',  // Cambia el color de fondo a azul
-    borderColor: 'black',      // Cambia el color del borde a rojo
-    color: 'white',          // Cambia el color del texto a blanco
-    marginLeft: ".5em", width: "27%"
     };
 
     const footer = (
@@ -70,7 +81,6 @@ const ParteUno = ({
         </span>
     );
 
-
     const uploadHandler = async () => {
         const formData = new FormData();
 
@@ -82,11 +92,20 @@ const ParteUno = ({
             method: "POST",
             body: formData,
         });
+        if (!response.ok) {
+            toast.error('Error al cargar los archivos');
+            return;
+        }
         await response.json();
         toast.success("Archivos cargados correctamente", {
             duration: 4000,
             position: "top-right",
         });
+    };
+
+    const handleDownloadFiles = () => {
+        window.location.href = `${urlBack}/descargaParteUno`;
+        console.log("descargado");
     };
 
     return (
@@ -152,4 +171,5 @@ const ParteUno = ({
         </>
     );
 };
+
 export default ParteUno;
