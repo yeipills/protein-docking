@@ -1,6 +1,6 @@
 ## Pasos para instalar las dependencias en VS Code
 
-Aquí encontrarás los pasos necesarios para instalar las siguientes dependencias en Visual Studio Code (VS Code):
+Aquí encontrarás los pasos necesarios para instalar las siguientes dependencias en Visual Studio Code (VS Code) y Pycharm:
 
 1. **Python**: 
    - Ve a la página de descargas de Python en [https://www.python.org/downloads/](https://www.python.org/downloads/).
