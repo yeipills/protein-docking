@@ -53,6 +53,11 @@ const ParteDos = ({
     const urlBack = process.env.REACT_APP_URL_BACKEND;
 
     const onSubmitFiles = () => {
+        if ((fileOne[0] && !fileOne[0].name.toLowerCase().endsWith('.txt')) ||
+            (fileTwo[0] && !fileTwo[0].name.toLowerCase().endsWith('.txt'))) {
+            toast.error("Archivo .txt inválido. Por favor, sube archivos .txt válidos.");
+            return;
+        }
         setFinalizado(false);
         setProcesando(true);
         uploadHandler();
