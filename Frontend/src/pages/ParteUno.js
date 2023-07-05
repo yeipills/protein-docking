@@ -37,12 +37,20 @@ const ParteUno = ({
         console.log("descargado");
     };
 
+    const buttonStyles = {
+    backgroundColor: 'black',  // Cambia el color de fondo a azul
+    borderColor: 'black',      // Cambia el color del borde a rojo
+    color: 'white',          // Cambia el color del texto a blanco
+    marginLeft: ".5em", width: "27%"
+    };
+
     const footer = (
         <span>
             <Button
                 label="Subir"
                 icon="pi pi-check"
                 className="button"
+                style={buttonStyles} // Agrega los estilos al botón
                 disabled={
                     !fileOne.length || !fileVertice.length || !fileFace.length
                 }
@@ -52,6 +60,7 @@ const ParteUno = ({
                 label="Cancelar"
                 icon="pi pi-times"
                 className="p-button-secondary button"
+                style={buttonStyles} // Agrega los estilos al botón
                 onClick={() => {
                     setFileOne([]);
                     setFileVertice([]);
@@ -60,6 +69,7 @@ const ParteUno = ({
             />
         </span>
     );
+
 
     const uploadHandler = async () => {
         const formData = new FormData();

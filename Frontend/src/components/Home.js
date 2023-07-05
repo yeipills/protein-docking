@@ -7,7 +7,7 @@ const styles = {
     display: "flex",
     flexDirection: "column",
     alignItems: "center",
-    justifyContent: "center",
+    justifyContent: "flex-start",
     height: "100vh",
     padding: "20px"
   },
@@ -23,18 +23,19 @@ const styles = {
   card: {
     textAlign: "center",
     border: "1px solid",
-    borderColor: "#8B5CF6",
+    borderColor: "#727272",
     borderRadius: "12px",
-    backgroundColor: "#cddcdc",
+    backgroundColor: "#F2F2F2",
     color: "black",
     maxWidth: "80%",
-    margin: "20px"
+    margin: "10px"
   },
   cardText: {
+    position: "flex",
     fontWeight: "light",
-    fontSize: "20px",
-    color: "#8B5CF6",
-    textTransform: "uppercase"
+    fontSize: "40px",
+    color: "#111020",
+    textTransform: "center"
   }
 };
 
@@ -46,7 +47,7 @@ const Home = () => {
       </div>
       <Card style={styles.card}>
         <span style={styles.cardText}>
-          Análisis y comparación de los tiempos de ejecución en los algoritmos del cálculo de las formas de contexto para mejorar la precisión de las mediciones utilizadas en el proceso de docking
+          Protein Docking
         </span>
       </Card>
       {/* Agrega aquí cualquier otro contenido adicional */}
