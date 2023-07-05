@@ -5,6 +5,7 @@ import { Chip } from "primereact/chip";
 import { Card } from "primereact/card";
 import { BlockUI } from "primereact/blockui";
 import styled from 'styled-components';
+import toast from 'react-hot-toast';
 
 // Aquí creas componentes con estilos personalizados
 const StyledCard = styled(Card)`
@@ -29,10 +30,22 @@ const CustomDropzone = ({
     chipLabel,
     blocked = false,
     acceptedFile = '*',
-}) => {
+    }) => {
     const onDrop = useCallback((acceptedFiles) => {
-        setFile(acceptedFiles);
-    }, [setFile]);
+    if (acceptedFiles.length === 0) {
+        return;
+    }
+    const file = acceptedFiles[0];
+    const fileName = file.name.toLowerCase();
+    if ((acceptedFile === '.stl' && !fileName.endsWith('.stl')) ||
+        (acceptedFile === '.vert' && !fileName.endsWith('.vert')) ||
+        (acceptedFile === '.face' && !fileName.endsWith('.face')) ||
+        (acceptedFile === '.txt' && !fileName.endsWith('.txt'))) {
+        toast.error(`Archivo ${acceptedFile} inválido. Por favor, sube un archivo ${acceptedFile} válido.`);
+        return;
+    }
+    setFile(acceptedFiles);
+    }, [setFile, acceptedFile]);
 
     const { getRootProps, getInputProps } = useDropzone({
         onDrop,
