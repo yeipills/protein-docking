@@ -69,35 +69,41 @@ const ParteDos = ({
     };
 
     const buttonStyles = {
-    backgroundColor: 'black',  // Cambia el color de fondo a azul
-    borderColor: 'black',      // Cambia el color del borde a rojo
-    color: 'white',          // Cambia el color del texto a blanco
-    marginLeft: ".5em", width: "27%"
-    };
-    const footer = (
-        <span>
-            <Button
-                label="Subir"
-                icon="pi pi-check"
-                style={buttonStyles}
-                disabled={
-                    !fileOne.length || !fileTwo.length || !nombreProteina.length
-                }
-                onClick={onSubmitFiles}
-            />
-            <Button
-                label="Cancelar"
-                icon="pi pi-times"
-                className="p-button-secondary"
-                style= {buttonStyles}
-                onClick={() => {
-                    setFileOne([]);
-                    setFileTwo([]);
-                    setNombreProteina("");
-                }}
-            />
-        </span>
-    );
+    backgroundColor: 'black', // Cambia el color de fondo
+    color: 'white',          // Cambia el color del texto
+    borderColor: 'black',    // Cambia el color del borde
+    marginLeft: ".5em",
+    width: "27%",
+    transition: 'all 0.3s ease', // Agrega transiciones suaves a los cambios de estilos
+    ':hover': {
+        backgroundColor: 'gray', // Cambia el color de fondo al pasar el mouse por encima
+        boxShadow: '0 0 10px black, 0 0 40px black, 0 0 80px black', // Agrega un efecto de 'glow' al pasar el mouse por encima
+    }
+};
+const footer = (
+    <span>
+        <Button
+            label="Subir"
+            icon="pi pi-check"
+            style={buttonStyles}
+            disabled={
+                !fileOne.length || !fileTwo.length || !nombreProteina.length
+            }
+            onClick={onSubmitFiles}
+        />
+        <Button
+            label="Cancelar"
+            icon="pi pi-times"
+            className="p-button-secondary"
+            style= {buttonStyles}
+            onClick={() => {
+                setFileOne([]);
+                setFileTwo([]);
+                setNombreProteina("");
+            }}
+        />
+    </span>
+);
 
     const uploadHandler = async () => {
         const formData = new FormData();
