@@ -27,7 +27,7 @@ Aquí encontrarás los pasos necesarios para instalar las siguientes dependencia
       pip install uvicorn
       pip install python-multipart
       pip install emit
-      pip install flask-cors
+      pip install Flask-Cors
 
      ```
 
