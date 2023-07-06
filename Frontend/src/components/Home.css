@@ -1,0 +1,11 @@
+@media (max-width: 768px) {
+  .expand-card {
+    position: absolute;
+    top: 50%;
+    left: 0;
+    transform: translateY(-50%);
+    width: 80%;
+    max-width: 100%;
+    margin: 10px;
+  }
+}
