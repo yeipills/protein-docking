@@ -6,31 +6,27 @@ import ParteUno from "./pages/ParteUno";
 import ParteDos from "./pages/ParteDos";
 import { io } from "socket.io-client";
 import toast, { Toaster } from "react-hot-toast";
+
 const socket = io(process.env.REACT_APP_URL_SOCKET);
 
 const App = () => {
     const [isConnected, setIsConnected] = useState(socket.connected);
+    const [isSidebarExpanded, setSidebarExpanded] = useState(false);
 
-    //!! Hooks parte uno
+    // Hooks for Part One
     const [fileOnePartOne, setFileOnePartOne] = useState([]);
     const [fileTwoPartOne, setFileTwoPartOne] = useState([]);
-
     const [fileVerticesPartOne, setFileVerticesPartOne] = useState([]);
     const [fileFacePartOne, setFileFacePartOne] = useState([]);
-
     const [procesandoPartOne, setProcesandoPartOne] = useState(false);
     const [finalizadoPartOne, setFinalizadoPartOne] = useState(false);
-    //!! Hooks parte uno
 
-    //!! Hooks parte dos
+    // Hooks for Part Two
     const [fileOnePartTwo, setFileOnePartTwo] = useState([]);
     const [fileTwoPartTwo, setFileTwoPartTwo] = useState([]);
-
     const [procesandoPartTwo, setProcesandoPartTwo] = useState(false);
     const [finalizadoPartTwo, setFinalizadoPartTwo] = useState(false);
-
     const [nombreProteina, setNombreProteina] = useState("");
-    //!! Hooks parte dos
 
     useEffect(() => {
         socket.on("connected_user", (e) => {
@@ -74,7 +70,7 @@ const App = () => {
 
     return (
         <>
-            <Navbar connected={isConnected} />
+            <Navbar connected={isConnected} onToggleSidebar={setSidebarExpanded} isSidebarExpanded={isSidebarExpanded} />
             <Toaster />
             <Routes>
                 <Route path="/" element={<Home />} />

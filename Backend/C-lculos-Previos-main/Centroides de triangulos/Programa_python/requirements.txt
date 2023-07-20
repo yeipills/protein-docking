@@ -10,3 +10,7 @@ uvicorn
 python-multipart
 emit
 flask-cors
+flask
+flask_restful
+flask_socketio
+

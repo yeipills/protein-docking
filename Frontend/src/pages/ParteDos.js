@@ -1,4 +1,4 @@
-import React from "react";
+import React, {useState} from "react";
 import { Card } from "primereact/card";
 import CustomDropzone from "../components/CustomDropzone";
 import { Button } from "primereact/button";
@@ -6,36 +6,8 @@ import { BlockUI } from "primereact/blockui";
 import { ProgressSpinner } from "primereact/progressspinner";
 import { InputText } from "primereact/inputtext";
 import toast from "react-hot-toast";
-
-// Define los estilos en un objeto fuera del componente de renderizado
-const styles = {
-    centeredContainer: {
-        display: "flex",
-        justifyContent: "center"
-    },
-    flexContainer: {
-        display: "flex"
-    },
-    flexColumn: {
-        display: "flex",
-        flexDirection: "column"
-    },
-    spacedContainer: {
-        display: "flex",
-        justifyContent: "space-around"
-    },
-    dropzone: {
-        width: "45%"
-    },
-    card: {
-        textAlign: "center"
-    },
-    input: {
-        width: "60%",
-        margin: "auto",
-        marginBottom: "5%"
-    }
-};
+import styles from './ParteDos.module.css';
+import {Divider} from "primereact/divider"; // Importa el archivo de estilos CSS
 
 const ParteDos = ({
     socket,
@@ -63,6 +35,7 @@ const ParteDos = ({
         uploadHandler();
     };
 
+     const [isDownloadReady, setIsDownloadReady] = useState(false);
     const handleDownloadFiles = () => {
         window.location.href = `${urlBack}/descargaParteDos`;
         console.log("descargado");
@@ -80,6 +53,7 @@ const ParteDos = ({
         boxShadow: '0 0 10px black, 0 0 40px black, 0 0 80px black', // Agrega un efecto de 'glow' al pasar el mouse por encima
     }
 };
+
 const footer = (
     <span>
         <Button
@@ -102,6 +76,13 @@ const footer = (
                 setNombreProteina("");
             }}
         />
+        <Button
+                label="Descargar"
+                onClick={handleDownloadFiles}
+                className="p-button-info button"
+                style={buttonStyles}
+                disabled={!isDownloadReady} // Button will be disabled until the file is ready
+            />
     </span>
 );
 
@@ -135,19 +116,23 @@ const footer = (
 
     return (
         <>
-            <div style={{...styles.centeredContainer, marginTop: "4%"}}>
+            <div className={styles['centered-container']}>
                 <BlockUI blocked={procesando} template={<ProgressSpinner />}>
-                    <Card title="Evaluación de capas" footer={footer} style={styles.card}>
-                        <div style={styles.flexColumn}>
+                    <div style={{ display: "flex", justifyContent: "center" }}>
+                    <Card title="Evaluación de capas" footer={footer} className={styles.card}>
+                        <div className={styles['flex-column']}>
                             <InputText
-                                style={styles.input}
+                                className={styles.input}
                                 placeholder="Nombre proteína"
                                 value={nombreProteina}
                                 onChange={(e) => setNombreProteina(e.target.value)}
+                                pt={{root: { className: 'border-primary-400' }}}
+
                             />
                         </div>
-                        <div style={styles.spacedContainer}>
-                            <div style={styles.dropzone}>
+                        <Divider />
+                        <div className={styles['spaced-container']}>
+                            <div className={styles.dropzone}>
                                 <CustomDropzone
                                     chipLabel="CR Totales"
                                     file={fileOne}
@@ -155,27 +140,21 @@ const footer = (
                                     acceptedFile=".txt"
                                 />
                             </div>
-                            <div style={styles.dropzone}>
+
+                            <div className={styles.dropzone}>
                                 <CustomDropzone
                                     chipLabel="Rayos contexto"
                                     file={fileTwo}
                                     setFile={setFileTwo}
                                     acceptedFile=".txt"
-                                />
+                                    />
+                                </div>
                             </div>
-                        </div>
-                    </Card>
+                        </Card>
+                    </div>
                 </BlockUI>
             </div>
-            <div style={{...styles.centeredContainer, marginTop: "2%"}}>
-                {finalizado && (
-                    <Card>
-                        <Button onClick={handleDownloadFiles}>
-                            Descargar resultados
-                        </Button>
-                    </Card>
-                )}{" "}
-            </div>
+
         </>
     );
 };
