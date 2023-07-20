@@ -2,7 +2,6 @@
     import { Card } from "primereact/card";
     import ubb_logo from "../resources/ubb_logo.png";
     import { Button } from "primereact/button";
-    import bg from "../resources/bg.jpeg";
     import './Home.css';
 
 
@@ -20,7 +19,7 @@
       logoContainer: {
         position: "absolute",
         top: "10px",
-        right: "10px"
+        right: "70px"
       },
 
       logo: {
@@ -92,9 +91,9 @@
         transform: "translateY(-50%)",
         textAlign: "center",
         border: "1px solid",
-        borderColor: "#727272",
+        borderColor: "rgba(0,0,0,0)",
         borderRadius: "12px",
-        backgroundColor: "#F2F2F2",
+        backgroundColor: "#1f253f",
         color: "black",
         maxWidth: "20%",
         margin: "10px"
@@ -118,7 +117,7 @@
         transitionDuration: "0.4s",
         // Hover state
         ":hover": {
-          backgroundColor: "#008CBA",
+          backgroundColor: "#008cba",
           color: "white "}
       }
     };
@@ -134,18 +133,16 @@
             <span style={styles.cardText}>Protein Docking</span>
           </Card>
 
-          <div style={{ width: "100%", overflowX: "hidden" }}>
-            <Card style={styles.card2} className="expand-card">
-              <span style={styles.cardText}>
-                <text style={{ ...styles.cardText2 }}>
-                  El acoplamiento molecular (conocido como docking) es una técnica para predecir cómo se unen compuestos y proteínas, útil para estudiar nuevos tratamientos. Aunque estos análisis pueden ser subjetivos debido a los criterios variados de selección de la "mejor pose" de los programas de docking, la aplicación del método semiempírico PM6 en la presente investigación mejoró la selección de poses, produciendo resultados con alta probabilidad de unión y menores energías de unión.
-                </text>
-              </span>
+          <div style={{ display: 'flex', justifyContent: 'space-around' }}>
+            <Card  style={{ width: '30em', height: '20em', margin: '2em', display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center' }}>
+                <h1>Que es docking</h1>
+                <p> El acoplamiento molecular (conocido como docking) es una técnica para predecir cómo se unen compuestos y proteínas, útil para estudiar nuevos tratamientos. Aunque estos análisis pueden ser subjetivos debido a los criterios variados de selección de la "mejor pose" de los programas de docking, la aplicación del método semiempírico PM6 en la presente investigación mejoró la selección de poses, produciendo resultados con alta probabilidad de unión y menores energías de unión.
+                </p>
             </Card>
-          </div>
+        </div>
 
                <Card style={styles.card3}>
-                    <span style={{ fontSize: "20px", fontWeight: "bold" }}>Bancos de proteinas</span>
+                    <span style={{ fontSize: "20px", fontWeight: "bold", color: "#ffffff" }}>Bancos de proteinas</span>
 
                     <div style={{ marginTop: "10px" }}>
                     <a href="https://www.rcsb.org/" target="_blank" style={Buttonstyle.buttun1}>
