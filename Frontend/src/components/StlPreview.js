@@ -2,6 +2,8 @@ import React, { useEffect, useRef } from 'react';
 import * as THREE from 'three';
 import { STLLoader } from 'three/examples/jsm/loaders/STLLoader.js';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
+//import { MeshLambertMaterial } from 'three';
+
 
 const StlPreview = ({ file }) => {
     const mountRef = useRef(null);
@@ -16,7 +18,8 @@ const StlPreview = ({ file }) => {
         const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
         const renderer = new THREE.WebGLRenderer();
 
-        renderer.setSize(800, 600);
+
+        renderer.setSize(700, 600);
         mountRef.current.appendChild(renderer.domElement);
 
         const controls = new OrbitControls(camera, renderer.domElement);
@@ -31,6 +34,7 @@ const StlPreview = ({ file }) => {
         loader.load(URL.createObjectURL(file), (geometry) => {
             const material = new THREE.MeshLambertMaterial({ color: 0x00ff00 });
             const mesh = new THREE.Mesh(geometry, material);
+
             scene.add(mesh);
 
             const box = new THREE.Box3().setFromObject(mesh);

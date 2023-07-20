@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState } from "react";
 import { Card } from "primereact/card";
 import CustomDropzone from "../components/CustomDropzone";
 import StlPreview from "../components/StlPreview";
@@ -26,11 +26,20 @@ const ParteUno = ({
 }) => {
     const urlBack = process.env.REACT_APP_URL_BACKEND;
 
+    // Create a new state variable to represent whether the file is ready to be downloaded
+    const [isDownloadReady, setIsDownloadReady] = useState(false);
+
     const buttonStyles = {
-        backgroundColor: 'black',  // Cambia el color de fondo a azul
-        borderColor: 'black',      // Cambia el color del borde a rojo
-        color: 'white',          // Cambia el color del texto a blanco
-        marginLeft: ".5em", width: "27%"
+        backgroundColor: 'black', // Cambia el color de fondo
+        color: 'white',          // Cambia el color del texto
+        borderColor: 'black',    // Cambia el color del borde
+        marginLeft: ".5em",
+        width: "27%",
+        transition: 'all 0.3s ease', // Agrega transiciones suaves a los cambios de estilos
+        ':hover': {
+        backgroundColor: 'gray', // Cambia el color de fondo al pasar el mouse por encima
+        boxShadow: '0 0 10px black, 0 0 40px black, 0 0 80px black', // Agrega un efecto de 'glow' al pasar el mouse por encima
+    }
     };
 
     const onSubmitFiles = () => {
@@ -38,9 +47,8 @@ const ParteUno = ({
             toast.error('Error: Todos los campos son obligatorios');
             return;
         }
-
         const isFileTypeValid = (
-            fileOne[0].type === 'application/sla' &&
+            fileOne[0].type === 'application/vnd.ms-pki.stl' &&
             fileVertice[0].type === 'text/plain' &&
             fileFace[0].type === 'text/plain'
         );
@@ -55,28 +63,41 @@ const ParteUno = ({
         uploadHandler();
     };
 
+    const handleDownloadFiles = () => {
+        window.location.href = `${urlBack}/descargaParteUno`;
+        console.log("descargado");
+    };
+
     const footer = (
         <span>
             <Button
                 label="Subir"
                 icon="pi pi-check"
                 className="button"
-                style={buttonStyles} // Agrega los estilos al botón
+                style={buttonStyles}
                 disabled={
                     !fileOne.length || !fileVertice.length || !fileFace.length
                 }
                 onClick={onSubmitFiles}
+
             />
             <Button
                 label="Cancelar"
                 icon="pi pi-times"
                 className="p-button-secondary button"
-                style={buttonStyles} // Agrega los estilos al botón
+                style={buttonStyles}
                 onClick={() => {
                     setFileOne([]);
                     setFileVertice([]);
                     setFileFace([]);
                 }}
+            />
+            <Button
+                label="Descargar"
+                onClick={handleDownloadFiles}
+                className="p-button-info button"
+                style={buttonStyles}
+                disabled={!isDownloadReady} // Button will be disabled until the file is ready
             />
         </span>
     );
@@ -92,27 +113,27 @@ const ParteUno = ({
             method: "POST",
             body: formData,
         });
+
         if (!response.ok) {
             toast.error('Error al cargar los archivos');
             return;
         }
+
         await response.json();
         toast.success("Archivos cargados correctamente", {
             duration: 4000,
             position: "top-right",
         });
-    };
 
-    const handleDownloadFiles = () => {
-        window.location.href = `${urlBack}/descargaParteUno`;
-        console.log("descargado");
+        // Update the download ready flag here
+        setIsDownloadReady(true);
     };
 
     return (
         <>
             <div className="upload-container">
                 <BlockUI blocked={procesando} template={<ProgressSpinner />}>
-                    <div style={{ display: "flex", justifyContent: "space-between" }}>
+                    <div style={{ display: "flex", justifyContent: "center" }}>
                         <Card
                             title="Lectura de caras y vértices"
                             footer={footer}
@@ -159,17 +180,9 @@ const ParteUno = ({
                     </div>
                 </BlockUI>
             </div>
-            <div className="download-container">
-                {finalizado && (
-                    <Card>
-                        <Button onClick={handleDownloadFiles}>
-                            Descargar resultados
-                        </Button>
-                    </Card>
-                )}
-            </div>
         </>
     );
 };
+
 
 export default ParteUno;
