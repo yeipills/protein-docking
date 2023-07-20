@@ -1,0 +1,39 @@
+.centered-container {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 100vh;
+}
+
+.flex-container {
+    display: flex;
+}
+
+.flex-column {
+    flex-direction: column;
+}
+
+
+.spaced-container {
+    display: flex;
+    justify-content: space-around;
+}
+
+.dropzone {
+    width: 45%;
+}
+
+.card {
+    text-align: center;
+}
+
+.input {
+    width: 50%;
+    margin-top: auto;
+    margin-bottom: 50px;  /* Ajusta este valor para modificar el espacio inferior */
+    color: #000000;       /* Color de texto */
+    background-color: #ffffff;  /* Color de fondo */
+    border-color: #000000;  /* Color del borde */
+}
+
+

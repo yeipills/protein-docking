@@ -1,59 +1,75 @@
-import React, { useState } from "react";
+import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from "primereact/button";
 import { Sidebar } from 'primereact/sidebar';
 
-const Navbar = ({ connected = false, buttonColor = '#000000', buttonBorderColor = '#000000' }) => {
+const Navbar = ({ connected = false, buttonColor = '#000000', buttonBorderColor = '#000000', onToggleSidebar, isSidebarExpanded }) => {
     const navigate = useNavigate();
-    const [visible, setVisible] = useState(false);
 
     const handleNavigation = (path) => {
         navigate(path);
-        setVisible(false);
+        onToggleSidebar(false);
     };
 
     return (
         <>
-            <Button
-                icon="pi pi-bars"
-                onClick={(e) => setVisible(true)}
-                style={{position: 'fixed', left: '1em', top: '1em', zIndex: 1000, backgroundColor: buttonColor, borderColor: buttonBorderColor}}
-            />
             <Sidebar
-                visible={visible}
-                onHide={(e) => setVisible(false)}
-                style={{width:'20em', backgroundColor: '#1F253F'}}
+                visible={true}
+                style={{
+                    width: isSidebarExpanded ? '18em' : '5em',
+                    backgroundColor: '#1f253f',
+                    position: 'fixed',
+                    left: '1em',
+                    top: '1em',
+                    bottom: '1em',
+                    borderRadius: '10px',
+                    transition: 'width 0.5s',
+                    height: 'calc(100% - 2em)'
+                }}
                 position="left"
                 baseZIndex={1000}
                 fullScreen={false}
+                showCloseIcon={false}
+                blockScroll={false}
+                modal={isSidebarExpanded}
             >
                 <Button
-                    label="Inicio"
                     icon="pi pi-fw pi-home"
                     onClick={() => handleNavigation('/')}
-                    style={{width: '100%', marginBottom: '1em', backgroundColor: buttonColor, borderColor: buttonBorderColor}}
-                />
+                    style={{top:'1%', width: '100%', marginBottom: '1em', backgroundColor: buttonColor, borderColor: buttonBorderColor, borderRadius: '10px'}}
+                >
+                    {isSidebarExpanded && "Inicio"}
+                </Button>
                 <Button
-                    label="Cálculo de Rayos de Contexto"
                     icon="pi pi-fw pi-bolt"
                     onClick={() => handleNavigation('/parteUno')}
-                    style={{width: '100%', marginBottom: '1em', backgroundColor: buttonColor, borderColor: buttonBorderColor}}
-                />
+                    style={{top:'1%',width: '100%', marginBottom: '1em', backgroundColor: buttonColor, borderColor: buttonBorderColor, borderRadius: '10px'}}
+                >
+                    {isSidebarExpanded && "Cálculo de Rayos de Contexto"}
+                </Button>
                 <Button
-                    label="Evaluación de capas"
                     icon="pi pi-fw pi-chart-bar"
                     onClick={() => handleNavigation('/parteDos')}
-                    style={{width: '100%', marginBottom: '1em', backgroundColor: buttonColor, borderColor: buttonBorderColor}}
-                />
+                    style={{top:'1%',width: '100%', marginBottom: '1em', backgroundColor: buttonColor, borderColor: buttonBorderColor, borderRadius: '10px'}}
+                >
+                    {isSidebarExpanded && "Evaluación de capas"}
+                </Button>
                 <Button
-                    label="Parte 1"
                     icon="pi pi-fw pi-server"
-                    style={{width: '100%', marginBottom: '1em', backgroundColor: buttonColor, borderColor: buttonBorderColor}}
+                    style={{top:'1%',width: '100%', marginBottom: '1em', backgroundColor: buttonColor, borderColor: buttonBorderColor, borderRadius: '10px'}}
                     disabled
-                />
-                <div style={{color: connected ? 'green' : 'red'}}>
-                    {connected ? 'Conectado' : 'No conectado'}
+                >
+                    {isSidebarExpanded && "Parte 1"}
+                </Button>
+                <div style={{width: '100%', margin: '0.8em', color: connected ? 'green' : 'red', display: 'flex', alignItems: 'center'}}>
+                    <i className={`pi ${connected ? 'pi-check' : 'pi-times'}`} style={{fontSize: '1em', marginRight: '.5em'}}></i>
+                    {isSidebarExpanded && (connected ? '¡Estás conectado!' : '¡Ups! Parece que estás desconectado.')}
                 </div>
+                <Button
+                    icon={isSidebarExpanded ? "pi pi-angle-left" : "pi pi-angle-right"}
+                    onClick={() => onToggleSidebar(!isSidebarExpanded)}
+                    style={{position: 'absolute', bottom: '1em', left: '50%', transform: 'translateX(-50%)', backgroundColor: buttonColor, borderColor: buttonBorderColor, borderRadius: '50%'}}
+                />
             </Sidebar>
         </>
     );

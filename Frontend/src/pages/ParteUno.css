@@ -1,8 +1,10 @@
 .upload-container {
     display: flex;
     justify-content: center;
-    margin-top: 4%;
+    align-items: center;
+    height: 100vh; /* Esto asegura que el contenedor ocupe toda la altura de la vista */
 }
+
 
 .card {
     text-align: center;
