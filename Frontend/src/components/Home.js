@@ -1,7 +1,6 @@
     import React from "react";
     import { Card } from "primereact/card";
-    import ubb_logo from "../resources/ubb_logo.png";
-    import { Button } from "primereact/button";
+     import { Button } from "primereact/button";
     import './Home.css';
 
 
@@ -16,16 +15,7 @@
         padding: "20px"
       },
 
-      logoContainer: {
-        position: "absolute",
-        top: "10px",
-        right: "70px"
-      },
 
-      logo: {
-        width: "200px",
-        height: "150px"
-      },
 
       card1: {
         textAlign: "center",
@@ -125,9 +115,7 @@
     const Home = () => {
       return (
         <div style={styles.container}>
-          <div style={styles.logoContainer}>
-            <img src={ubb_logo} alt="fireSpot" style={styles.logo} />
-          </div>
+
 
           <Card style={styles.card1}>
             <span style={styles.cardText}>Protein Docking</span>
