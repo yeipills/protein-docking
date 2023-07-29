@@ -12,7 +12,7 @@ from Script04_evaluacion_capas import getCs
 
 app = FastAPI()
 
-app.socketServer = "http://localhost:5000"
+app.socketServer = "http://localhost:8000"
 
 app.add_middleware(
     CORSMiddleware,
