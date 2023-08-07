@@ -55,7 +55,7 @@ cd tesis
 
 - Este path es el que se utiliza para llegar al backend 
 ```
-cd Backend\C-lculos-Previos-main\Centroides de triangulos\Programa_python 
+cd '.\Backend\C-lculos-Previos-main\Centroides de triangulos\Programa_python\'
 ```
 
 Pasos para iniciar el backend, una vez situados en la carpeta Programa_python
@@ -77,7 +77,7 @@ Pasos para iniciar el backend, una vez situados en la carpeta Programa_python
 
 Este path es el que se utiliza para llegar al socket del backend 
 ```
-cd Backend\C-lculos-Previos-main\Centroides de triangulos\Programa_python\socket
+cd '.\Backend\C-lculos-Previos-main\Centroides de triangulos\Programa_python\socket'
 ```
 Pasos para iniciar el backend, una vez situados en la carpeta socket
 
