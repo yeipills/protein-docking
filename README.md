@@ -63,13 +63,13 @@ Pasos para iniciar el backend, una vez situados en la carpeta Programa_python
 1. Ejecute el siguiente comando para construir la imagen Docker:
 
     ```
-    docker build -t my-fastAPI-app .
+    docker build -t my-fastapi-app .
     ```
 
 2. Ejecute el siguiente comando para ejecutar el contenedor Docker:
 
     ```
-    docker run -p 5000:5000 my-fastAPI-app
+    docker run -p 5000:5000 my-fastapi-app
     ```
 
 - La aplicación ahora debería estar accesible en `http://localhost:5000`.
