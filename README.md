@@ -1,4 +1,4 @@
-##Protein Docking##
+## Protein Docking
 
 "Protein Docking" es un proyecto destinado a optimizar el algoritmo de docking para facilitar su uso en la investigación biomédica. Con un enfoque en mejorar la interfaz de usuario y resolver problemas de compatibilidad, este proyecto está diseñado para acelerar el proceso de investigación y es especialmente útil para profesionales en campos como la química y la biología. Se trata de una aplicación web intuitiva que no implica costos adicionales, utilizando los equipos y recursos ya existentes.
 
