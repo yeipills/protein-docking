@@ -22,6 +22,7 @@ def getCR(nombreProteina, nombreVertices, nombreCaras):
     # Convirtiendo el archivo stl a malla
     mesh_SES = trimesh.exchange.load.load(filename)
 
+
     #mesh, info = pymesh.remove_isolated_vertices(mesh_SES)
 
     # Obteniendo los centros de los puntos de superficie

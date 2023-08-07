@@ -1,7 +1,6 @@
 ######################## PROGRAMA 2 ###################
 # Tiene las funciones que retornan los valores de MSMS
 import Script01_lectura_caras_vertices as S1
-import numpy as np
 import time
 
 
