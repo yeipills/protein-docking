@@ -1,3 +1,20 @@
+##Protein Docking##
+
+"Protein Docking" es un proyecto destinado a optimizar el algoritmo de docking para facilitar su uso en la investigación biomédica. Con un enfoque en mejorar la interfaz de usuario y resolver problemas de compatibilidad, este proyecto está diseñado para acelerar el proceso de investigación y es especialmente útil para profesionales en campos como la química y la biología. Se trata de una aplicación web intuitiva que no implica costos adicionales, utilizando los equipos y recursos ya existentes.
+
+## Software stack
+El proyecto Protein Docking es una aplicación web que corre sobre el siguiente software:
+
+- 
+
+- ~~Debian GNU/Linux 10 Buster - Debian GNU/Linux 9 Jessie - Ubuntu 20.04 - Ubuntu 19.10~~
+- ~~Apache 2.4.38~~
+- ~~Nginx 1.14.2~~
+- ~~PHP 7.3 (ext: curl, gd, mbstring, mysql, pgsql, xml, zip)~~
+- ~~Ruby 2.5~~
+- ~~Python 3.7.3~~
+- ~~NodeJS 13.11.0~~
+- ~~Base de Datos MySQL 5 - PostgreSQL 11~~
 ## Pasos para instalar las dependencias en VS Code
 
 Aquí encontrarás los pasos necesarios para instalar las siguientes dependencias en Visual Studio Code (VS Code) y Pycharm:
