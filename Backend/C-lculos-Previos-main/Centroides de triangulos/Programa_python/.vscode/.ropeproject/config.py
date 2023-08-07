@@ -18,7 +18,7 @@ def set_prefs(prefs):
                                   '.hg', '.svn', '_svn', '.git', '.tox']
 
     # Specifies which files should be considered python files.  It is
-    # useful when you have scripts inside your project.  Only files
+    # useful when you have scriptcitos inside your project.  Only files
     # ending with ``.py`` are considered to be python files by
     # default.
     # prefs['python_files'] = ['*.py']

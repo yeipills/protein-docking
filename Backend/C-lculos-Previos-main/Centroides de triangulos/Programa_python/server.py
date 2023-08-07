@@ -12,7 +12,7 @@ from Script04_evaluacion_capas import getCs
 
 app = FastAPI()
 
-app.socketServer = "http://localhost:8000"
+app.socketServer = "http://localhost:5000"
 
 app.add_middleware(
     CORSMiddleware,
@@ -35,24 +35,21 @@ async def create_upload_files(background_tasks: BackgroundTasks,
                               proteinaCaras: UploadFile = File(...),
                               ):
     try:
-        isExist = os.path.exists("./proteinas_stl")
-        if not isExist:
-            os.makedirs("./proteinas_stl")
-        isExist = os.path.exists("./proteinas")
-        if not isExist:
-            os.makedirs("./proteinas")
+        os.makedirs("./proteinas_stl", exist_ok=True)
+        os.makedirs("./proteinas", exist_ok=True)
 
-        proteinaStlPath = f"./proteinas_stl/"+"%s" % proteinaStl.filename
+        proteinaStlPath = os.path.join("./proteinas_stl", proteinaStl.filename)
+        proteinaVerticesPath = os.path.join("./proteinas", proteinaVertices.filename)
+        proteinaCarasPath = os.path.join("./proteinas", proteinaCaras.filename)
+
         async with aiofiles.open(proteinaStlPath, 'wb') as out_file:
             while content := await proteinaStl.read(1024):
                 await out_file.write(content)
 
-        proteinaVerticesPath = f"./proteinas/"+"%s" % proteinaVertices.filename
         async with aiofiles.open(proteinaVerticesPath, 'wb') as out_file:
             while content := await proteinaVertices.read(1024):
                 await out_file.write(content)
 
-        proteinaCarasPath = f"./proteinas/"+"%s" % proteinaCaras.filename
         async with aiofiles.open(proteinaCarasPath, 'wb') as out_file:
             while content := await proteinaCaras.read(1024):
                 await out_file.write(content)
@@ -81,16 +78,15 @@ async def create_upload_files(background_tasks: BackgroundTasks,
                               rayosContexto: UploadFile = File(...),
                               ):
     try:
-        isExist = os.path.exists("./proteinas_cr")
-        if not isExist:
-            os.makedirs("./proteinas_cr")
+        os.makedirs("./proteinas_cr", exist_ok=True)
 
-        crTotalesPath = f"./proteinas_cr/"+"%s" % crTotales.filename
+        crTotalesPath = os.path.join("./proteinas_cr", crTotales.filename)
+        rayosContextoPath = os.path.join("./proteinas_cr", rayosContexto.filename)
+
         async with aiofiles.open(crTotalesPath, 'wb') as out_file:
             while content := await crTotales.read(1024):
                 await out_file.write(content)
 
-        rayosContextoPath = f"./proteinas_cr/"+"%s" % rayosContexto.filename
         async with aiofiles.open(rayosContextoPath, 'wb') as out_file:
             while content := await rayosContexto.read(1024):
                 await out_file.write(content)
@@ -114,17 +110,17 @@ async def create_upload_files(background_tasks: BackgroundTasks,
 @app.get("/descargaParteUno")
 async def descarga_parte_uno(background_tasks: BackgroundTasks):
     zipDir = shutil.make_archive(
-        base_name="./resultadosParteUno", format="zip", root_dir="./proteinas_cr")
+        base_name=os.path.join(".", "resultadosParteUno"), format="zip", root_dir=os.path.join(".", "proteinas_cr"))
     background_tasks.add_task(deleteZipResults, zipName=zipDir)
-    return FileResponse("./resultadosParteUno.zip", media_type='application/octet-stream', filename="resultadosParteUno.zip")
+    return FileResponse(os.path.join(".", "resultadosParteUno.zip"), media_type='application/octet-stream', filename="resultadosParteUno.zip")
 
 
 @app.get("/descargaParteDos")
 async def descarga_parte_dos(background_tasks: BackgroundTasks):
     zipDir = shutil.make_archive(
-        base_name="./resultadosParteDos", format="zip", root_dir="./proteinas_cs")
+        base_name=os.path.join(".", "resultadosParteDos"), format="zip", root_dir=os.path.join(".", "proteinas_cs_unity"))
     background_tasks.add_task(deleteZipResults, zipName=zipDir)
-    return FileResponse("./resultadosParteDos.zip", media_type='application/octet-stream', filename="resultadosParteDos.zip")
+    return FileResponse(os.path.join(".", "resultadosParteDos.zip"), media_type='application/octet-stream', filename="resultadosParteDos.zip")
 
 
 def runScript3(proteinaStl: str, nombreVertices: str, nombreCaras: str):
