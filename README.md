@@ -69,12 +69,26 @@ Pasos para iniciar el backend, una vez situados en la carpeta
     docker run -p 3000:3000 my-node-app
     ```
 
-La aplicación ahora debería estar accesible en `http://localhost:3000`.
+- La aplicación ahora debería estar accesible en `http://localhost:3000`.
+
 ```
 Este path es el que se utiliza para llegar al socket del backend 
 ```
 cd Backend\C-lculos-Previos-main\Centroides de triangulos\Programa_python\socket
 ```
+Pasos para iniciar el backend, una vez situados en la carpeta
+
+1. Ejecute el siguiente comando para construir la imagen Docker:
+
+    ```
+    docker build -t my-node-app .
+    ```
+
+2. Ejecute el siguiente comando para ejecutar el contenedor Docker:
+
+    ```
+    docker run -p 3000:3000 my-node-app
+    ```
 Este path es el que se utiliza para llegar al frontend
 ```
 cd Frontend
