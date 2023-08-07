@@ -51,9 +51,9 @@ git clone https://github.com/yeipills/tesis.git
 ```
 cd tesis
 ```
-Este path es el que se utiliza para llegar al backend 
+- Este path es el que se utiliza para llegar al backend 
 ```
-cd \tesis\Backend\C-lculos-Previos-main\Centroides de triangulos\Programa_python 
+cd Backend\C-lculos-Previos-main\Centroides de triangulos\Programa_python 
 ```
 Pasos para iniciar el backend, una vez situados en la carpeta
 
@@ -73,11 +73,11 @@ La aplicación ahora debería estar accesible en `http://localhost:3000`.
 ```
 Este path es el que se utiliza para llegar al socket del backend 
 ```
-cd \tesis\Backend\C-lculos-Previos-main\Centroides de triangulos\Programa_python\socket
+cd Backend\C-lculos-Previos-main\Centroides de triangulos\Programa_python\socket
 ```
 Este path es el que se utiliza para llegar al frontend
 ```
-cd \tesis\Frontend
+cd Frontend
 ```
 
 
