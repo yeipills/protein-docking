@@ -1,5 +1,4 @@
 from http.client import HTTPException
-
 from flask import Flask, request, jsonify, render_template
 from flask_socketio import SocketIO, emit
 from flask_cors import CORS

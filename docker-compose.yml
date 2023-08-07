@@ -1,0 +1,38 @@
+version: '3.8'
+services:
+  flask_service:
+    build:
+      context: .\Backend\C-lculos-Previos-main\Centroides de triangulos\Programa_python\socket
+      dockerfile: Dockerfile
+    ports:
+      - "8080:8080"
+    volumes:
+      - .\Backend\C-lculos-Previos-main\Centroides de triangulos\Programa_python\socket:/app/socket
+    networks:
+      - app-network
+
+  uvicorn_service:
+    build:
+      context: .\Backend\C-lculos-Previos-main\Centroides de triangulos\Programa_python
+      dockerfile: Dockerfile
+    ports:
+      - "5000:5000"
+    volumes:
+      - .\Backend\C-lculos-Previos-main\Centroides de triangulos\Programa_python:/app
+    networks:
+      - app-network
+
+  node_service:
+    build:
+      context: .\Frontend
+      dockerfile: Dockerfile
+    ports:
+      - "3000:3000"
+    volumes:
+      - .\Frontend:/app
+    networks:
+      - app-network
+
+networks:
+  app-network:
+    driver: bridge
