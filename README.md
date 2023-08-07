@@ -48,14 +48,17 @@ git clone https://github.com/yeipills/tesis.git
 ```
 
 - Segundo, nos movemos  dentro de la carpeta "tesis", para entrar a las demas carpetas se usa el mismo comando
+  
 ```
 cd tesis
 ```
+
 - Este path es el que se utiliza para llegar al backend 
 ```
 cd Backend\C-lculos-Previos-main\Centroides de triangulos\Programa_python 
 ```
-Pasos para iniciar el backend, una vez situados en la carpeta
+
+Pasos para iniciar el backend, una vez situados en la carpeta Programa_python
 
 1. Ejecute el siguiente comando para construir la imagen Docker:
 
@@ -66,29 +69,33 @@ Pasos para iniciar el backend, una vez situados en la carpeta
 2. Ejecute el siguiente comando para ejecutar el contenedor Docker:
 
     ```
-    docker run -p 3000:3000 my-node-app
+    docker run -p 5000:5000 my-node-app
     ```
 
-- La aplicación ahora debería estar accesible en `http://localhost:3000`.
+- La aplicación ahora debería estar accesible en `http://localhost:5000`.
 
-```
+
 Este path es el que se utiliza para llegar al socket del backend 
 ```
 cd Backend\C-lculos-Previos-main\Centroides de triangulos\Programa_python\socket
 ```
-Pasos para iniciar el backend, una vez situados en la carpeta
+Pasos para iniciar el backend, una vez situados en la carpeta socket
 
 1. Ejecute el siguiente comando para construir la imagen Docker:
 
     ```
-    docker build -t my-node-app .
+    docker build -t my-socket .
     ```
 
 2. Ejecute el siguiente comando para ejecutar el contenedor Docker:
 
     ```
-    docker run -p 3000:3000 my-node-app
+    docker run -p 8000:8000 my-socket
     ```
+    
+- La aplicación ahora debería estar accesible en `http://localhost:8000`.
+
+
 Este path es el que se utiliza para llegar al frontend
 ```
 cd Frontend
