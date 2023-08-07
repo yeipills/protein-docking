@@ -3,18 +3,66 @@
 "Protein Docking" es un proyecto destinado a optimizar el algoritmo de docking para facilitar su uso en la investigación biomédica. Con un enfoque en mejorar la interfaz de usuario y resolver problemas de compatibilidad, este proyecto está diseñado para acelerar el proceso de investigación y es especialmente útil para profesionales en campos como la química y la biología. Se trata de una aplicación web intuitiva que no implica costos adicionales, utilizando los equipos y recursos ya existentes.
 
 ## Software stack
-El proyecto Protein Docking es una aplicación web que corre sobre el siguiente software:
+El proyecto Protein Docking es una aplicación web que se ejecuta sobre el siguiente software:
 
-- 
+### Backend
+- Python 3.8
+- FastAPI
+- Flask
+- Cython
+- Uvicorn
 
-- ~~Debian GNU/Linux 10 Buster - Debian GNU/Linux 9 Jessie - Ubuntu 20.04 - Ubuntu 19.10~~
-- ~~Apache 2.4.38~~
-- ~~Nginx 1.14.2~~
-- ~~PHP 7.3 (ext: curl, gd, mbstring, mysql, pgsql, xml, zip)~~
-- ~~Ruby 2.5~~
-- ~~Python 3.7.3~~
-- ~~NodeJS 13.11.0~~
-- ~~Base de Datos MySQL 5 - PostgreSQL 11~~
+#### Dependencias de Python/Cython:
+- Numpy
+- Cython
+- Trimesh
+- Aiofiles
+- Requests
+- Scipy
+- Cythonizer
+- Python-multipart
+- Emit
+
+#### Dependencias de Flask:
+- Flask-CORS
+- Flask-RESTful
+- Flask-SocketIO
+
+### Frontend
+- NodeJS
+- React
+- PrimeReact
+
+#### Dependencias de NodeJS:
+- Npm
+
+#### Lenguajes
+- JavaScript (JS)
+- Cascading Style Sheets (CSS)
+
+## Configuraciones de Ejecución para Entorno de Desarrollo
+- Primero, clonaremos el repositorio
+
+```
+git clone https://github.com/yeipills/tesis.git 
+```
+
+- Segundo, nos movemos  dentro de la carpeta "tesis", para entrar a las demas carpetas se usa el mismo comando
+```
+cd tesis
+```
+Este path es el que se utiliza para llegar al backend
+```
+cd \tesis\Backend\C-lculos-Previos-main\Centroides de triangulos\Programa_python 
+```
+Este path es el que se utiliza para llegar al frontend
+```
+cd \tesis\Frontend
+```
+
+
+## Configuraciones de Ejecución para Entorno de Produccción
+
 ## Pasos para instalar las dependencias en VS Code
 
 Aquí encontrarás los pasos necesarios para instalar las siguientes dependencias en Visual Studio Code (VS Code) y Pycharm:
