@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Card } from "primereact/card";
 import CustomDropzone from "../components/CustomDropzone";
 import StlPreview from "../components/StlPreview";
@@ -10,11 +10,8 @@ import toast from "react-hot-toast";
 import './ParteUno.css';
 
 const ParteUno = ({
-    socket,
     fileOne,
     setFileOne,
-    fileTwo,
-    setFileTwo,
     procesando,
     setProcesando,
     finalizado,
@@ -25,43 +22,49 @@ const ParteUno = ({
     setFileFace,
 }) => {
     const urlBack = process.env.REACT_APP_URL_BACKEND;
-
-    // Create a new state variable to represent whether the file is ready to be downloaded
     const [isDownloadReady, setIsDownloadReady] = useState(false);
 
+    useEffect(() => {
+        if (finalizado) {
+            setIsDownloadReady(true);
+        }
+    }, [finalizado]);
+
     const buttonStyles = {
-        backgroundColor: 'black', // Cambia el color de fondo
-        color: 'white',          // Cambia el color del texto
-        borderColor: 'black',    // Cambia el color del borde
+        backgroundColor: 'black',
+        color: 'white',
+        borderColor: 'black',
         marginLeft: ".5em",
         width: "27%",
-        transition: 'all 0.3s ease', // Agrega transiciones suaves a los cambios de estilos
+        transition: 'all 0.3s ease',
         ':hover': {
-        backgroundColor: 'gray', // Cambia el color de fondo al pasar el mouse por encima
-        boxShadow: '0 0 10px black, 0 0 40px black, 0 0 80px black', // Agrega un efecto de 'glow' al pasar el mouse por encima
-    }
+            backgroundColor: 'gray',
+            boxShadow: '0 0 10px black, 0 0 40px black, 0 0 80px black',
+        }
     };
 
     const onSubmitFiles = () => {
-        if (!fileOne.length || !fileVertice.length || !fileFace.length) {
-            toast.error('Error: Todos los campos son obligatorios');
-            return;
-        }
-        const isFileTypeValid = (
-            fileOne[0].type === 'application/vnd.ms-pki.stl' &&
-            fileVertice[0].type === 'text/plain' &&
-            fileFace[0].type === 'text/plain'
-        );
+    if (!fileOne.length || !fileVertice.length || !fileFace.length) {
+        toast.error('Error: Todos los campos son obligatorios');
+        return;
+    }
 
-        if (!isFileTypeValid) {
-            toast.error('Error: Los tipos de archivo son incorrectos');
-            return;
-        }
+    const isFileTypeValid = (
+        fileOne[0].name.endsWith('.stl') &&
+        fileVertice[0].name.endsWith('.vert') &&
+        fileFace[0].name.endsWith('.face')
+    );
 
-        setFinalizado(false);
-        setProcesando(true);
-        uploadHandler();
-    };
+    if (!isFileTypeValid) {
+        toast.error('Error: Los tipos de archivo son incorrectos');
+        return;
+    }
+
+    setProcesando(true);
+    uploadHandler().catch(() => {
+        setProcesando(false);
+    });
+};
 
     const handleDownloadFiles = () => {
         window.location.href = `${urlBack}/descargaParteUno`;
@@ -92,41 +95,47 @@ const ParteUno = ({
                     setFileFace([]);
                 }}
             />
+
             <Button
                 label="Descargar"
                 onClick={handleDownloadFiles}
                 className="p-button-info button"
                 style={buttonStyles}
-                disabled={!isDownloadReady} // Button will be disabled until the file is ready
+                disabled={!isDownloadReady}
             />
         </span>
     );
 
     const uploadHandler = async () => {
         const formData = new FormData();
-
         formData.append("proteinaStl", fileOne[0]);
         formData.append("proteinaVertices", fileVertice[0]);
         formData.append("proteinaCaras", fileFace[0]);
 
-        const response = await fetch(`${urlBack}/cargarParteUno`, {
-            method: "POST",
-            body: formData,
-        });
+        try {
+            const response = await fetch(`${urlBack}/cargarParteUno`, {
+                method: "POST",
+                body: formData,
+            });
 
-        if (!response.ok) {
-            toast.error('Error al cargar los archivos');
-            return;
+            if (!response.ok) {
+                throw new Error('Error al cargar los archivos');
+            }
+
+            await response.json();
+            toast.success("Archivos cargados correctamente", {
+                duration: 4000,
+                position: "top-right",
+            });
+
+            setIsDownloadReady(true);
+            setProcesando(false);
+            setFinalizado(true);
+        } catch (error) {
+            setProcesando(false);
+            toast.error(error.message);
+            throw error;
         }
-
-        await response.json();
-        toast.success("Archivos cargados correctamente", {
-            duration: 4000,
-            position: "top-right",
-        });
-
-        // Update the download ready flag here
-        setIsDownloadReady(true);
     };
 
     return (
@@ -157,7 +166,7 @@ const ParteUno = ({
                                     />
                                 </div>
                             </div>
-                            <Divider />
+                                <Divider />
                             <div className="upload-row">
                                 <div style={{ width: "45%" }}>
                                     <CustomDropzone
@@ -183,6 +192,5 @@ const ParteUno = ({
         </>
     );
 };
-
 
 export default ParteUno;

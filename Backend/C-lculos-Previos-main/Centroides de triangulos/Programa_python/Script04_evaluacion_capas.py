@@ -1,14 +1,9 @@
 ######################## PROGRAMA 4 ####################
 
 import numpy as np
-import csv
-import math
 import os
-import trimesh
-import math
 #from astropy import units as u
 #import Script03_rayos_contexto as S3
-import time
 # from Script04 import suma_capa
 from Script04 import distancia_pto_lista,calcular_modulo_pto,suma_capa,pto_en_esfera
 # calcular_modulo_pto
@@ -158,81 +153,6 @@ def getCs(nombreProteina, nombreCrTotales, nombreRayosContexto):
         else:
             listado.append([number_cs, number_ray, 0, pto_final])
 
-    # def calcular_modulo_pto(pto):
-    #     s = time.perf_counter()
-    #     # print("pto",pto)
-    #     # pto=[x,x,x]
-    #     x_pto = float(pto[0])
-    #     y_pto = float(pto[1])
-    #     z_pto = float(pto[2])
-    #     # distancia entre ambos puntos debe ser igual al radio del rayo de contexto
-    #     d_cuadrada = (x_pto)*(x_pto)+(y_pto)*(y_pto)+(z_pto)*(z_pto)
-    #     modulo = math.sqrt(d_cuadrada)
-    #     # print("modulo",modulo)
-    #     e = time.perf_counter()
-    #     print(f'Duration script4: {e-s:.4f}s')
-    #     return modulo
-
-# radii=3, centro=[x,x,x], pto[x,x,x]///x_centro=-x , x_pto=-x
-    # def pto_en_esfera(radii, centro, pto):
-    #     # print("radii",radii)
-    #     # print("centro",centro)
-    #     # print("pto",pto)
-    #     x_centro = centro[0]
-    #     # print("x_centro",x_centro)
-    #     y_centro = centro[1]
-    #     z_centro = centro[2]
-
-    #     x_pto = pto[0]
-    #     # print("x_pto",x_pto)
-    #     y_pto = pto[1]
-    #     z_pto = pto[2]
-
-    #     # distancia entre ambos puntos debe ser igual al radio del rayo de contexto
-    #     d_cuadrada = (x_pto-x_centro)*(x_pto-x_centro)+(y_pto-y_centro) * \
-    #         (y_pto-y_centro)+(z_pto-z_centro)*(z_pto-z_centro)
-    #     if d_cuadrada-(radii*radii) < 0.001:
-    #         return True
-    #     else:
-    #         return False
-
-    # def distancia_pto_lista(pto1, listado_ptos):
-    #     # s = time.perf_counter()
-    #     # distancia entre un punto y un array de puntos, devuelve el pto del array más cercano a pto 1
-
-    #     x_1 = float(pto1[0])
-    #     y_1 = float(pto1[1])
-    #     z_1 = float(pto1[2])
-    #     listado_d = list()
-    #     # cont_distancia_pto_lista=0
-    #     for pto2 in listado_ptos:
-    #         x_2 = float(pto2[0])
-    #         y_2 = float(pto2[1])
-    #         z_2 = float(pto2[2])
-    #         # d=calcular_distancia_pto_lista(x_1,y_1,z_1,x_2,y_2,z_2)
-    #         d2 = (x_2-x_1)*(x_2-x_1)+(y_2-y_1)*(y_2-y_1)+(z_2-z_1)*(z_2-z_1)
-    #         d = math.sqrt(d2)
-    #         listado_d.append(d)
-    #         # cont_distancia_pto_lista=cont_distancia_pto_lista+1
-    #     listado_sort = sorted(listado_d)
-    #     # e = time.perf_counter()
-    #     # print(f'python time distancia_pto_lista: {e-s:.10f}s')
-    #     return listado_sort[0]
-
-    # def suma_capa(pto, dist):
-    #     # s = time.perf_counter()
-    #     # para sumar una distancia de modulo 1
-    #     modulo = math.sqrt((pto[0]*pto[0]+pto[1]*pto[1]+pto[2]*pto[2]))
-    #     # sumandole 1 al punto para obtener el in1
-    #     x = pto[0]+dist*(pto[0]/modulo)
-    #     y = pto[1]+dist*(pto[1]/modulo)
-    #     z = pto[2]+dist*(pto[2]/modulo)
-    #     # e = time.perf_counter()
-    #     # print(f'python time suma_capa: {e-s:.10f}s')
-    #     return [x, y, z]
-
-
-
     ###############FIN FUNCIONES DE APOYO #################
     # Retorna el índice de la forma de contexto y todos los inicios y fin de cada rayo
     rayos_contexto = list()
@@ -321,30 +241,7 @@ def getCs(nombreProteina, nombreCrTotales, nombreRayosContexto):
     cs_out3 = list()
     cs_out4 = list()
     cs_ses = list()
-    # #determinar ses, para eso se evalúan solo los puntos que son de tipo ses
-    # print(SES_points[0])
-    # print(coordenadas[0])
-    # print("SES_points000",len(SES_points[0]))
-    # print("SES_points111",SES_points[1])
-    # ---------------------implementacion.-----------
-    # if(len(SES_points)>0):
-    #     # print("llego")
-    #     # hola(6)
-    #     # s = time.perf_counter()
-    #     start = time.time()
-    #     determinar_ses(SES_points,cs_in1,cs_in2,cs_in3,cs_in4,cs_out1,cs_out2,cs_out3,cs_out4,cs_ses)
-    #     end =  time.time()
-    #     cy_time = end - start
-    #     print("Cython time determinar_ses = {}".format(cy_time))
-    # print("llego_fin")
-    # e = time.perf_counter()
-    # print(f'Duration function script4: {e-s:.4f}s')
-    # print("se termino")
-    # -------------------------------------------------------------------------------------
-    # def returnSes(SES_points):
-    #     mapCreate=determinar_ses(SES_points)
-    #     print("llego")
-    #     return SES_points
+
 
     # print("SES_points",SES_points)
     cont_pto_tipo_ses = 0
@@ -435,12 +332,7 @@ def getCs(nombreProteina, nombreCrTotales, nombreRayosContexto):
 
             if d_ses:
                 cs_ses.append([item[0], number_ray, ptos_ses])
-    # end =  time.time()
-    # cy_time = end - start
-    # print("Cython time determinar_ses = {}".format(cy_time))
-    # e = time.perf_counter()
-    # print(f'Duration function script4: {e-s:.4f}s')
-    # print("se termino")
+
 
     n = 16  # cantidad de divisiones, en el paper usan 32
 
@@ -496,8 +388,7 @@ def getCs(nombreProteina, nombreCrTotales, nombreRayosContexto):
         calculo_cs(cs_out4_final, item[4], out3, out4,
                    type_cell, "out", number_cs, number_ray, item[3])
     print("fin evaluacion")
-    # e = time.perf_counter()
-    # print(f'Duration script4: {e-s:.4f}s')
+
 
     def escribir_archivo(nombre, lista):
         with open(nombre, 'w') as f:
@@ -510,7 +401,7 @@ def getCs(nombreProteina, nombreCrTotales, nombreRayosContexto):
                 # [number_cs,number_ray,0,pto_final]
                 f.write("%s\n" % string_total)
 
-    carpeta_cs = str('./proteinas_cs/')
+    carpeta_cs = str('../proteinas_cs_unity')
     name_cs = carpeta_cs+str(nombreProteina)
     fname_ses = os.path.join(dirname, name_cs+'_ses.txt')
     fname_in1 = os.path.join(dirname, name_cs+'_in1.txt')
