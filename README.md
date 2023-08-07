@@ -63,13 +63,13 @@ Pasos para iniciar el backend, una vez situados en la carpeta Programa_python
 1. Ejecute el siguiente comando para construir la imagen Docker:
 
     ```
-    docker build -t my-node-app .
+    docker build -t my-fastAPI-app .
     ```
 
 2. Ejecute el siguiente comando para ejecutar el contenedor Docker:
 
     ```
-    docker run -p 5000:5000 my-node-app
+    docker run -p 5000:5000 my-fastAPI-app
     ```
 
 - La aplicación ahora debería estar accesible en `http://localhost:5000`.
@@ -101,9 +101,22 @@ Este path es el que se utiliza para llegar al frontend
 cd Frontend
 ```
 
+1. Ejecute el siguiente comando para construir la imagen Docker:
 
+    ```
+    docker build -t my-node-app .
+    ```
+
+2. Ejecute el siguiente comando para ejecutar el contenedor Docker:
+
+    ```
+    docker run -p 3000:3000 my-node-app
+    ```
+
+La aplicación ahora debería estar accesible en `http://localhost:3000`.
 
 ## Configuraciones de Ejecución para Entorno de Produccción
+
 
 ## Pasos para instalar las dependencias en VS Code
 
