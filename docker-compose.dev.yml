@@ -1,0 +1,133 @@
+# Docker Compose for Protein Docking Platform
+# Development configuration with hot-reload
+
+version: '3.8'
+
+services:
+  postgres:
+    image: postgres:15-alpine
+    container_name: protein_docking_postgres_dev
+    environment:
+      POSTGRES_USER: protein_user
+      POSTGRES_PASSWORD: dev_password
+      POSTGRES_DB: protein_docking_dev
+    volumes:
+      - postgres_dev_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    networks:
+      - protein_network
+    restart: unless-stopped
+
+  redis:
+    image: redis:7-alpine
+    container_name: protein_docking_redis_dev
+    ports:
+      - "6379:6379"
+    networks:
+      - protein_network
+    restart: unless-stopped
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: protein_docking_backend_dev
+    command: uvicorn app.main:app --host 0.0.0.0 --port 5000 --reload
+    environment:
+      - ENVIRONMENT=development
+      - POSTGRES_USER=protein_user
+      - POSTGRES_PASSWORD=dev_password
+      - POSTGRES_DB=protein_docking_dev
+      - POSTGRES_HOST=postgres
+      - REDIS_HOST=redis
+      - JWT_SECRET_KEY=dev_jwt_secret_key_change_in_production_minimum_64_chars_long
+      - SECRET_KEY=dev_secret_key_change_in_production
+      - SOCKET_SECRET_KEY=dev_socket_secret_key_change_in_production
+      - BACKEND_RELOAD=true
+      - LOG_LEVEL=DEBUG
+    volumes:
+      - ./backend/app:/app/app
+      - uploads_dev:/app/uploads
+      - results_dev:/app/results
+      - logs_dev:/app/logs
+    ports:
+      - "5000:5000"
+    depends_on:
+      - postgres
+      - redis
+    networks:
+      - protein_network
+    restart: unless-stopped
+
+  socket:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: protein_docking_socket_dev
+    command: python socket_server/app.py
+    environment:
+      - ENVIRONMENT=development
+      - POSTGRES_USER=protein_user
+      - POSTGRES_PASSWORD=dev_password
+      - POSTGRES_DB=protein_docking_dev
+      - POSTGRES_HOST=postgres
+      - REDIS_HOST=redis
+      - JWT_SECRET_KEY=dev_jwt_secret_key_change_in_production_minimum_64_chars_long
+      - SECRET_KEY=dev_secret_key_change_in_production
+      - SOCKET_SECRET_KEY=dev_socket_secret_key_change_in_production
+      - LOG_LEVEL=DEBUG
+    volumes:
+      - ./backend/socket_server:/app/socket_server
+      - ./backend/app:/app/app
+      - logs_dev:/app/logs
+    ports:
+      - "8080:8080"
+    depends_on:
+      - backend
+    networks:
+      - protein_network
+    restart: unless-stopped
+
+  celery_worker:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: protein_docking_celery_dev
+    command: celery -A app.tasks.celery_app worker --loglevel=debug --concurrency=1
+    environment:
+      - ENVIRONMENT=development
+      - POSTGRES_USER=protein_user
+      - POSTGRES_PASSWORD=dev_password
+      - POSTGRES_DB=protein_docking_dev
+      - POSTGRES_HOST=postgres
+      - REDIS_HOST=redis
+      - JWT_SECRET_KEY=dev_jwt_secret_key_change_in_production_minimum_64_chars_long
+      - SECRET_KEY=dev_secret_key_change_in_production
+      - LOG_LEVEL=DEBUG
+    volumes:
+      - ./backend/app:/app/app
+      - uploads_dev:/app/uploads
+      - results_dev:/app/results
+      - logs_dev:/app/logs
+    depends_on:
+      - redis
+      - postgres
+      - backend
+    networks:
+      - protein_network
+    restart: unless-stopped
+
+networks:
+  protein_network:
+    driver: bridge
+
+volumes:
+  postgres_dev_data:
+    driver: local
+  uploads_dev:
+    driver: local
+  results_dev:
+    driver: local
+  logs_dev:
+    driver: local
