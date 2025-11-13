@@ -1,0 +1,19 @@
+# Development Dockerfile for Protein Docking Platform Frontend
+# Includes hot-reload and development tools
+
+FROM node:20-alpine as development
+
+WORKDIR /app
+
+# Install dependencies
+COPY package.json package-lock.json ./
+RUN npm ci --silent
+
+# Copy application source
+COPY . .
+
+# Expose Vite dev server port
+EXPOSE 3000
+
+# Start development server with hot-reload
+CMD ["npm", "run", "dev", "--", "--host", "0.0.0.0"]
