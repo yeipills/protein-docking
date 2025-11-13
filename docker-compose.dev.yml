@@ -118,6 +118,37 @@ services:
       - protein_network
     restart: unless-stopped
 
+  # =====================================
+  # Frontend - React Dev Server with HMR
+  # =====================================
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile.dev
+      target: development
+    container_name: protein_docking_frontend_dev
+    command: npm run dev
+    environment:
+      - VITE_API_URL=http://localhost:5000/api/v1
+      - VITE_SOCKET_URL=http://localhost:8080
+      - VITE_ENV=development
+    volumes:
+      - ./frontend/src:/app/src
+      - ./frontend/public:/app/public
+      - ./frontend/index.html:/app/index.html
+      - ./frontend/vite.config.ts:/app/vite.config.ts
+      - ./frontend/tsconfig.json:/app/tsconfig.json
+      - ./frontend/tailwind.config.js:/app/tailwind.config.js
+      - ./frontend/postcss.config.js:/app/postcss.config.js
+    ports:
+      - "3000:3000"
+    depends_on:
+      - backend
+      - socket
+    networks:
+      - protein_network
+    restart: unless-stopped
+
 networks:
   protein_network:
     driver: bridge
