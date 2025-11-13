@@ -80,8 +80,8 @@ def process_part_one(self, job_id: int):
 
         # Step 2: Calculate centroids (50% progress)
         logger.info(f"Calculating centroids for protein {protein.name}")
-        centroids = calculate_centroids(vertices, faces)
-        protein.centroid_count = len(centroids)
+        centros, centroids_strings = calculate_centroids(vertices, faces)
+        protein.centroid_count = len(centros)
         job.progress = 50
         db.commit()
 
@@ -89,11 +89,12 @@ def process_part_one(self, job_id: int):
         logger.info(f"Calculating context rays for protein {protein.name}")
         output_dir = Path(protein.stl_file).parent
         cr_totals_file, context_rays_file = calculate_context_rays(
-            protein.name,
-            vertices,
-            faces,
-            centroids,
-            str(output_dir)
+            protein_name=protein.name,
+            stl_file=protein.stl_file,
+            arr_vert=vertices,
+            arr_face=faces,
+            centroids=centros,
+            output_dir=str(output_dir)
         )
         job.progress = 90
         db.commit()
@@ -172,6 +173,10 @@ def process_part_two(self, job_id: int):
         from app.algorithms.layer_evaluator import evaluate_layers
         from app.algorithms.unity_exporter import export_for_unity
 
+        # Verify input files exist
+        if not protein.cr_totals_file or not protein.context_rays_file:
+            raise Exception("Context rays files not found. Run Part One first.")
+
         # Step 1: Read CR files (20% progress)
         logger.info(f"Processing CR files for protein {protein.name}")
         job.progress = 20
@@ -180,26 +185,32 @@ def process_part_two(self, job_id: int):
         # Step 2: Evaluate layers (70% progress)
         logger.info(f"Evaluating layers for protein {protein.name}")
         output_dir = Path(protein.cr_totals_file).parent
-        layer_data = evaluate_layers(
-            protein.cr_totals_file,
-            protein.context_rays_file,
-            str(output_dir)
+        cs_output_dir = str(output_dir / "context_shapes")
+
+        layer_file_paths = evaluate_layers(
+            cr_totals_file=protein.cr_totals_file,
+            context_rays_file=protein.context_rays_file,
+            output_dir=cs_output_dir,
+            protein_name=protein.name
         )
         job.progress = 70
         db.commit()
 
         # Step 3: Export for Unity (95% progress)
         logger.info(f"Exporting Unity files for protein {protein.name}")
-        layer_files = export_for_unity(
-            protein.name,
-            layer_data,
-            str(output_dir)
+        unity_output_dir = str(output_dir / "unity")
+
+        unity_files = export_for_unity(
+            protein_name=protein.name,
+            context_rays_file=protein.context_rays_file,
+            layer_files=layer_file_paths,
+            output_dir=unity_output_dir
         )
         job.progress = 95
         db.commit()
 
         # Update protein with layer files
-        protein.layer_files = layer_files
+        protein.layer_files = {**layer_file_paths, **unity_files}
 
         # Calculate processing time
         processing_time = int(time.time() - start_time)
@@ -209,7 +220,8 @@ def process_part_two(self, job_id: int):
         job.status = JobStatus.COMPLETED
         job.completed_at = datetime.utcnow()
         job.progress = 100
-        job.output_files = list(layer_files.values())
+        all_output_files = list(layer_file_paths.values()) + list(unity_files.values())
+        job.output_files = all_output_files
 
         db.commit()
 
@@ -218,7 +230,7 @@ def process_part_two(self, job_id: int):
         return {
             "job_id": job_id,
             "status": "completed",
-            "output_files": list(layer_files.values()),
+            "output_files": all_output_files,
             "processing_time": processing_time
         }
 

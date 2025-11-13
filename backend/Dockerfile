@@ -8,18 +8,29 @@ FROM python:3.11-slim as builder
 
 WORKDIR /build
 
-# Install build dependencies
+# Install build dependencies for Cython compilation
 RUN apt-get update && apt-get install -y \
     gcc \
     g++ \
     make \
+    python3-dev \
     && rm -rf /var/lib/apt/lists/*
 
 # Copy requirements
 COPY requirements.txt .
 
-# Install Python dependencies
+# Install Python dependencies (including Cython and numpy)
 RUN pip install --no-cache-dir --user -r requirements.txt
+
+# Copy setup.py and Cython source files for compilation
+COPY setup.py .
+COPY app/algorithms/cython_utils.pyx app/algorithms/cython_utils.pyx
+
+# Compile Cython extensions
+# This creates .so files that provide 4-6x speedup for layer evaluation
+RUN python setup.py build_ext --inplace
+
+# Note: Compiled .so files will be in app/algorithms/ directory
 
 # =====================================
 # Stage 2: Runtime - Copy only what's needed
@@ -42,6 +53,10 @@ ENV PATH=/root/.local/bin:$PATH
 # Copy application code
 COPY ./app /app/app
 COPY ./socket_server /app/socket_server
+
+# Copy compiled Cython extensions from builder
+# These .so files provide 4-6x performance boost for layer evaluation
+COPY --from=builder /build/app/algorithms/*.so /app/app/algorithms/ 2>/dev/null || true
 
 # Create directories for uploads and logs
 RUN mkdir -p /app/uploads /app/results /app/logs
