@@ -663,8 +663,8 @@ For questions or support, please open an issue on GitHub.
 
 ---
 
-**Version:** 2.1.0
-**Last Updated:** 2025-11-13
+**Version:** 2.1.2
+**Last Updated:** 2025-11-14
 **Status:** ✅ Production-Ready - All Features Complete
 **Frontend:** React 18 + TypeScript 5 + Vite 5
 **Backend:** FastAPI + Celery + PostgreSQL + Redis
