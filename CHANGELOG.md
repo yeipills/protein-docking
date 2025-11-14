@@ -20,11 +20,6 @@ Corregidas vulnerabilidades críticas identificadas en dependencias.
   - **Impacto**: Previene SSRF, filtración de credenciales y consumo excesivo de memoria
   - **Severidad**: Alta (CVSS 7.5)
 
-- **socket.io-client**: 5.12.0 (error) → **4.8.1** (correcta)
-  - ✅ Versión corregida a la última estable
-  - ✅ package-lock.json generado
-  - **Impacto**: Estabilidad y compatibilidad
-
 ### Recomendaciones
 - Ejecutar `pip install -r backend/requirements.txt` para actualizar dependencias Python
 - Ejecutar `npm install` en `frontend/` para actualizar dependencias JavaScript
