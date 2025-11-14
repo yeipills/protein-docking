@@ -9,18 +9,24 @@ FROM python:3.11-slim as builder
 WORKDIR /build
 
 # Install build dependencies for Cython compilation
-RUN apt-get update && apt-get install -y \
+# Cleaned in same layer to reduce image size
+RUN apt-get update && apt-get install -y --no-install-recommends \
     gcc \
     g++ \
     make \
     python3-dev \
     && rm -rf /var/lib/apt/lists/*
 
-# Copy requirements
+# Copy requirements FIRST for better layer caching
+# If requirements.txt unchanged, Docker uses cached pip install
 COPY requirements.txt .
 
-# Install Python dependencies (including Cython and numpy)
-RUN pip install --no-cache-dir --user -r requirements.txt
+# Install Python dependencies with optimizations
+# --user installs to /root/.local (copied to runtime stage)
+# --no-cache-dir reduces image size
+# Cached if requirements.txt hasn't changed
+RUN pip install --no-cache-dir --user -r requirements.txt && \
+    pip list
 
 # Copy setup.py and Cython source files for compilation
 COPY setup.py .
@@ -39,11 +45,13 @@ FROM python:3.11-slim
 
 WORKDIR /app
 
-# Install runtime dependencies only
-RUN apt-get update && apt-get install -y \
+# Install runtime dependencies only (no build tools needed)
+# Cleaned in same layer to minimize final image size
+RUN apt-get update && apt-get install -y --no-install-recommends \
     libgomp1 \
     wget \
-    && rm -rf /var/lib/apt/lists/*
+    && rm -rf /var/lib/apt/lists/* \
+    && apt-get clean
 
 # Copy Python dependencies from builder
 COPY --from=builder /root/.local /root/.local
