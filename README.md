@@ -1,5 +1,11 @@
 # Protein Docking Platform v2.1.0
 
+[![CI Pipeline](https://github.com/yeipills/protein-docking/workflows/CI%20Pipeline/badge.svg)](https://github.com/yeipills/protein-docking/actions)
+[![codecov](https://codecov.io/gh/yeipills/protein-docking/branch/main/graph/badge.svg)](https://codecov.io/gh/yeipills/protein-docking)
+[![Python 3.11](https://img.shields.io/badge/python-3.11-blue.svg)](https://www.python.org/downloads/)
+[![Node 20](https://img.shields.io/badge/node-20-green.svg)](https://nodejs.org/)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+
 > **Enterprise-grade protein docking analysis platform with multi-user support, real-time processing, advanced monitoring, and production-ready infrastructure**
 
 ## Overview
