@@ -1,0 +1,166 @@
+# ================================
+# Monitoring Stack - Docker Compose
+# ================================
+# Prometheus + Grafana for observability
+# Usage: docker-compose -f docker-compose.yml -f docker-compose.monitoring.yml up -d
+
+version: '3.8'
+
+services:
+  # ==========================================
+  # PROMETHEUS - Metrics Collection
+  # ==========================================
+  prometheus:
+    image: prom/prometheus:v2.48.0
+    container_name: protein_docking_prometheus
+    restart: unless-stopped
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--storage.tsdb.retention.time=30d'  # Keep metrics for 30 days
+      - '--web.console.libraries=/etc/prometheus/console_libraries'
+      - '--web.console.templates=/etc/prometheus/consoles'
+      - '--web.enable-lifecycle'  # Enable reload via HTTP POST
+    volumes:
+      - ./prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus_data:/prometheus
+    ports:
+      - "9090:9090"
+    networks:
+      - protein-docking-network
+    labels:
+      - "com.protein-docking.description=Prometheus metrics server"
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:9090/-/healthy"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  # ==========================================
+  # GRAFANA - Visualization & Dashboards
+  # ==========================================
+  grafana:
+    image: grafana/grafana:10.2.2
+    container_name: protein_docking_grafana
+    restart: unless-stopped
+    environment:
+      # Admin credentials
+      - GF_SECURITY_ADMIN_USER=admin
+      - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_ADMIN_PASSWORD:-admin}
+
+      # Server settings
+      - GF_SERVER_ROOT_URL=http://localhost:3001
+      - GF_SERVER_DOMAIN=localhost
+
+      # Anonymous access (disable in production)
+      - GF_AUTH_ANONYMOUS_ENABLED=false
+      - GF_AUTH_ANONYMOUS_ORG_ROLE=Viewer
+
+      # Data source provisioning
+      - GF_PATHS_PROVISIONING=/etc/grafana/provisioning
+
+      # Plugins
+      - GF_INSTALL_PLUGINS=grafana-clock-panel,grafana-simple-json-datasource,grafana-piechart-panel
+
+      # Logging
+      - GF_LOG_LEVEL=info
+
+    volumes:
+      - grafana_data:/var/lib/grafana
+      - ./grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./grafana/dashboards:/var/lib/grafana/dashboards:ro
+    ports:
+      - "3001:3000"
+    networks:
+      - protein-docking-network
+    depends_on:
+      - prometheus
+    labels:
+      - "com.protein-docking.description=Grafana dashboards and visualization"
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:3000/api/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  # ==========================================
+  # POSTGRES EXPORTER - Database Metrics
+  # ==========================================
+  postgres-exporter:
+    image: prometheuscommunity/postgres-exporter:v0.15.0
+    container_name: protein_docking_postgres_exporter
+    restart: unless-stopped
+    environment:
+      DATA_SOURCE_NAME: "postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}?sslmode=disable"
+      PG_EXPORTER_AUTO_DISCOVER_DATABASES: "true"
+    ports:
+      - "9187:9187"
+    networks:
+      - protein-docking-network
+    depends_on:
+      - postgres
+    labels:
+      - "com.protein-docking.description=PostgreSQL metrics exporter"
+
+  # ==========================================
+  # REDIS EXPORTER - Cache Metrics
+  # ==========================================
+  redis-exporter:
+    image: oliver006/redis_exporter:v1.55.0
+    container_name: protein_docking_redis_exporter
+    restart: unless-stopped
+    environment:
+      REDIS_ADDR: "redis:6379"
+      REDIS_EXPORTER_LOG_FORMAT: "json"
+    ports:
+      - "9121:9121"
+    networks:
+      - protein-docking-network
+    depends_on:
+      - redis
+    labels:
+      - "com.protein-docking.description=Redis metrics exporter"
+
+  # ==========================================
+  # NODE EXPORTER - Host System Metrics (Optional)
+  # ==========================================
+  # Uncomment to enable host system metrics collection
+  # node-exporter:
+  #   image: prom/node-exporter:v1.7.0
+  #   container_name: protein_docking_node_exporter
+  #   restart: unless-stopped
+  #   command:
+  #     - '--path.rootfs=/host'
+  #     - '--collector.filesystem.mount-points-exclude=^/(sys|proc|dev|host|etc)($$|/)'
+  #   volumes:
+  #     - /:/host:ro,rslave
+  #   ports:
+  #     - "9100:9100"
+  #   networks:
+  #     - protein-docking-network
+  #   labels:
+  #     - "com.protein-docking.description=Node/system metrics exporter"
+
+# ==========================================
+# VOLUMES
+# ==========================================
+volumes:
+  prometheus_data:
+    driver: local
+    labels:
+      - "com.protein-docking.description=Prometheus time-series database"
+
+  grafana_data:
+    driver: local
+    labels:
+      - "com.protein-docking.description=Grafana configuration and dashboards"
+
+# ==========================================
+# NETWORKS
+# ==========================================
+# Uses the same network as main docker-compose.yml
+networks:
+  protein-docking-network:
+    external: true
