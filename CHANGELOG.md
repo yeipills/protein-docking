@@ -1,5 +1,32 @@
 # Changelog - Protein Docking Platform
 
+## [2.1.2] - 2025-11-14
+
+### 🔒 Critical Security Updates
+
+Corregidas vulnerabilidades críticas identificadas en dependencias.
+
+#### Backend (Python)
+- **python-jose**: 3.3.0 → **3.5.0** 🔴 CRÍTICO
+  - ✅ CVE-2024-33663 corregido - Algorithm confusion con claves ECDSA de OpenSSH
+  - ✅ CVE-2024-33664 corregido - Denial of Service via compressed JWE content (JWT bomb)
+  - **Impacto**: Previene ataques de confusión de algoritmo y DoS
+  - **Severidad**: Crítica
+
+#### Frontend (JavaScript)
+- **axios**: 1.7.7 → **1.12.0** 🔴 CRÍTICO
+  - ✅ CVE-2025-27152 corregido - SSRF y filtración de credenciales con URLs absolutas
+  - ✅ CVE-2025-58754 corregido - Bypass de límites de contenido con data URLs
+  - **Impacto**: Previene SSRF, filtración de credenciales y consumo excesivo de memoria
+  - **Severidad**: Alta (CVSS 7.5)
+
+### Recomendaciones
+- Ejecutar `pip install -r backend/requirements.txt` para actualizar dependencias Python
+- Ejecutar `npm install` en `frontend/` para actualizar dependencias JavaScript
+- Reiniciar todos los servicios después de actualizar
+
+---
+
 ## [2.1.1] - 2025-11-14
 
 ### 🚀 Production Infrastructure & DevOps Enhancements
