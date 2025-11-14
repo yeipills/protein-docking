@@ -22,6 +22,7 @@ from app.core.exceptions import (
 from app.core.logging import get_logger
 from app.config import get_settings
 from app.tasks.protein_tasks import process_part_one, process_part_two
+from app.core.file_validation import validate_file_comprehensive, sanitize_filename
 
 logger = get_logger(__name__)
 router = APIRouter()
@@ -38,17 +39,56 @@ async def upload_part_one(
     db: Session = Depends(get_db)
 ):
     """
-    Upload protein files (Part One) and start processing
-    Generates centroidsand context rays
-    """
-    # Validate file extensions
-    allowed_extensions = ['.stl', '.vert', '.face']
-    files = [stl_file, vertices_file, faces_file]
+    Upload protein files (Part One) and start processing.
 
-    for file in files:
-        ext = Path(file.filename).suffix.lower()
-        if ext not in allowed_extensions:
-            raise ValidationException(f"Invalid file extension: {ext}")
+    Performs comprehensive validation including:
+    - File extension and size checks
+    - MIME type validation
+    - STL structure validation (ASCII/Binary)
+    - VERT/FACE format validation
+    - Security checks (path traversal, null bytes, etc.)
+
+    Generates centroids and context rays.
+    """
+    # Comprehensive file validation with content checking
+    logger.info(f"Validating uploaded files for protein: {protein_name}")
+
+    try:
+        # Validate STL file
+        stl_validation = await validate_file_comprehensive(
+            stl_file,
+            expected_extension='.stl',
+            validate_content=True
+        )
+        logger.info(f"STL validation: {stl_validation}")
+
+        # Validate VERT file
+        vert_validation = await validate_file_comprehensive(
+            vertices_file,
+            expected_extension='.vert',
+            validate_content=True
+        )
+        logger.info(f"VERT validation: {vert_validation}")
+
+        # Validate FACE file
+        face_validation = await validate_file_comprehensive(
+            faces_file,
+            expected_extension='.face',
+            validate_content=True
+        )
+        logger.info(f"FACE validation: {face_validation}")
+
+        # Cross-validation: ensure FACE indices don't exceed VERT count
+        if 'max_vertex_index' in face_validation and 'vertex_count' in vert_validation:
+            if face_validation['max_vertex_index'] >= vert_validation['vertex_count']:
+                raise ValidationException(
+                    detail=f"FACE file references vertex index {face_validation['max_vertex_index']}, "
+                    f"but VERT file only has {vert_validation['vertex_count']} vertices"
+                )
+
+    except ValidationException as e:
+        logger.error(f"File validation failed for protein {protein_name}: {e.detail}")
+        raise
 
     # Create protein record
     protein = Protein(
@@ -63,14 +103,21 @@ async def upload_part_one(
     upload_dir = Path(settings.UPLOAD_DIR) / str(current_user.id) / str(protein.id)
     upload_dir.mkdir(parents=True, exist_ok=True)
 
-    # Save files
+    # Sanitize protein name for safe filesystem use
+    safe_protein_name = sanitize_filename(protein_name)
+
+    # Save files with sanitized names
     file_paths = {}
     for file, file_type in [(stl_file, 'stl'), (vertices_file, 'vert'), (faces_file, 'face')]:
-        file_path = upload_dir / f"{protein_name}.{file_type}"
+        safe_filename = sanitize_filename(file.filename or f"{safe_protein_name}.{file_type}")
+        file_path = upload_dir / f"{safe_protein_name}.{file_type}"
+
         async with aiofiles.open(file_path, 'wb') as f:
             content = await file.read()
             await f.write(content)
         file_paths[file_type] = str(file_path)
+
+        logger.info(f"Saved {file_type} file: {file_path} ({len(content)} bytes)")
 
     # Update protein with file paths
     protein.stl_file = file_paths['stl']
@@ -107,7 +154,14 @@ async def upload_part_two(
     db: Session = Depends(get_db)
 ):
     """
-    Upload CR files (Part Two) and start layer processing
+    Upload CR files (Part Two) and start layer processing.
+
+    Performs validation on context rays files including:
+    - File extension and size checks
+    - Text file encoding validation
+    - Security checks
+
+    Generates layer files for Unity visualization.
     """
     # Get protein
     protein = db.query(Protein).filter(Protein.id == protein_id).first()
@@ -117,18 +171,47 @@ async def upload_part_two(
     if protein.user_id != current_user.id:
         raise ForbiddenException("Not authorized to access this protein")
 
+    # Validate uploaded files
+    logger.info(f"Validating CR files for protein ID: {protein_id}")
+
+    try:
+        # Validate CR totals file
+        cr_totals_validation = await validate_file_comprehensive(
+            cr_totals_file,
+            expected_extension='.txt',
+            validate_content=False  # Basic validation only for txt files
+        )
+        logger.info(f"CR totals validation: {cr_totals_validation}")
+
+        # Validate context rays file
+        context_rays_validation = await validate_file_comprehensive(
+            context_rays_file,
+            expected_extension='.txt',
+            validate_content=False
+        )
+        logger.info(f"Context rays validation: {context_rays_validation}")
+
+    except ValidationException as e:
+        logger.error(f"File validation failed for Part Two: {e.detail}")
+        raise
+
     # Create directory
     upload_dir = Path(settings.UPLOAD_DIR) / str(current_user.id) / str(protein.id)
     upload_dir.mkdir(parents=True, exist_ok=True)
 
+    # Sanitize filenames
+    safe_protein_name = sanitize_filename(protein.name)
+
     # Save files
     file_paths = {}
     for file, file_type in [(cr_totals_file, 'cr_totals'), (context_rays_file, 'context_rays')]:
-        file_path = upload_dir / f"{protein.name}_{file_type}.txt"
+        file_path = upload_dir / f"{safe_protein_name}_{file_type}.txt"
         async with aiofiles.open(file_path, 'wb') as f:
             content = await file.read()
             await f.write(content)
         file_paths[file_type] = str(file_path)
+
+        logger.info(f"Saved {file_type} file: {file_path} ({len(content)} bytes)")
 
     # Update protein
     protein.cr_totals_file = file_paths['cr_totals']

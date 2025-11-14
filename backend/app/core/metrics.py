@@ -130,6 +130,29 @@ cache_memory_bytes = Gauge(
 )
 
 # ==========================================
+# FILE VALIDATION METRICS
+# ==========================================
+
+file_validation_total = Counter(
+    'file_validation_total',
+    'Total file validations performed',
+    ['file_type', 'status']  # status: success, failed
+)
+
+file_validation_failures = Counter(
+    'file_validation_failures_total',
+    'Total file validation failures',
+    ['file_type', 'reason']  # reason: size, extension, content, mime, etc.
+)
+
+file_validation_duration_seconds = Histogram(
+    'file_validation_duration_seconds',
+    'Time spent validating files',
+    ['file_type'],
+    buckets=(0.001, 0.005, 0.01, 0.05, 0.1, 0.5, 1.0, 2.0, 5.0)
+)
+
+# ==========================================
 # APPLICATION INFO
 # ==========================================
 
