@@ -14,7 +14,10 @@ import time
 from app.config import get_settings
 from app.database import create_tables
 from app.core.logging import setup_logging, get_logger
+from app.core.env_validation import startup_validation
+from app.core.metrics import track_request_metrics, http_requests_in_progress
 from app.api import api_router
+from prometheus_client import make_asgi_app
 
 # Load settings
 settings = get_settings()
@@ -33,6 +36,9 @@ async def lifespan(app: FastAPI):
     # Startup
     logger.info("Starting Protein Docking Platform API")
     logger.info(f"Environment: {settings.ENVIRONMENT}")
+
+    # Validate environment configuration
+    startup_validation()
 
     # Create database tables
     logger.info("Creating database tables...")
@@ -69,27 +75,43 @@ app.add_middleware(
 )
 
 
-# Request logging middleware
+# Request logging and metrics middleware
 @app.middleware("http")
-async def log_requests(request: Request, call_next):
-    """Log all requests"""
+async def log_and_track_requests(request: Request, call_next):
+    """Log all requests and track metrics"""
     start_time = time.time()
+    method = request.method
+    path = request.url.path
 
-    # Log request
-    logger.info(f"Request: {request.method} {request.url.path}")
+    # Track in-progress requests
+    http_requests_in_progress.labels(method=method, endpoint=path).inc()
 
-    # Process request
-    response = await call_next(request)
+    try:
+        # Log request
+        logger.info(f"Request: {method} {path}")
 
-    # Log response
-    process_time = time.time() - start_time
-    logger.info(
-        f"Response: {response.status_code} - "
-        f"Time: {process_time:.3f}s - "
-        f"Path: {request.url.path}"
-    )
+        # Process request
+        response = await call_next(request)
 
-    return response
+        # Calculate duration
+        duration = time.time() - start_time
+
+        # Log response
+        logger.info(
+            f"Response: {response.status_code} - "
+            f"Time: {duration:.3f}s - "
+            f"Path: {path}"
+        )
+
+        # Track metrics (exclude /metrics endpoint from tracking itself)
+        if path != "/metrics":
+            track_request_metrics(method, path, response.status_code, duration)
+
+        return response
+
+    finally:
+        # Decrement in-progress counter
+        http_requests_in_progress.labels(method=method, endpoint=path).dec()
 
 
 # Health check endpoint
@@ -117,6 +139,10 @@ async def root():
 
 # Include API routes
 app.include_router(api_router, prefix="/api/v1")
+
+# Prometheus metrics endpoint
+metrics_app = make_asgi_app()
+app.mount("/metrics", metrics_app)
 
 
 # Global exception handler
