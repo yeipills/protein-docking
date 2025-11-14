@@ -413,7 +413,7 @@ A: Start with Python implementations. They will work but be slow. Learn Cython l
 A: Use sample protein files from `Backend/.../proteinas/` directory. Start with small proteins for faster iteration.
 
 **Q: Can I get help?**
-A: Yes! Each script has detailed comments. You can also ask Claude for help with specific functions.
+A: Yes! Each script has detailed comments in the original source files. You can also refer to the inline documentation and code examples.
 
 ---
 
