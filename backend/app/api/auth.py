@@ -2,7 +2,7 @@
 Authentication endpoints
 Handles user registration, login, and token refresh
 """
-from fastapi import APIRouter, Depends, status
+from fastapi import APIRouter, Depends, status, Request
 from sqlalchemy.orm import Session
 from app.database import get_db
 from app.models.user import User
@@ -20,13 +20,18 @@ from app.core.exceptions import (
     ValidationException
 )
 from app.core.logging import get_logger
+from app.core.rate_limit import (
+    limiter,
+    RateLimitTier
+)
 
 logger = get_logger(__name__)
 router = APIRouter()
 
 
 @router.post("/register", response_model=UserResponse, status_code=status.HTTP_201_CREATED)
-async def register(user_data: UserCreate, db: Session = Depends(get_db)):
+@limiter.limit(RateLimitTier.AUTH_REGISTER)
+async def register(request: Request, user_data: UserCreate, db: Session = Depends(get_db)):
     """
     Register a new user
 
@@ -72,7 +77,8 @@ async def register(user_data: UserCreate, db: Session = Depends(get_db)):
 
 
 @router.post("/login", response_model=Token)
-async def login(login_data: UserLogin, db: Session = Depends(get_db)):
+@limiter.limit(RateLimitTier.AUTH_LOGIN)
+async def login(request: Request, login_data: UserLogin, db: Session = Depends(get_db)):
     """
     Login and get access token
 
@@ -112,7 +118,8 @@ async def login(login_data: UserLogin, db: Session = Depends(get_db)):
 
 
 @router.post("/refresh", response_model=Token)
-async def refresh_token(refresh_token: str, db: Session = Depends(get_db)):
+@limiter.limit(RateLimitTier.AUTH_REFRESH)
+async def refresh_token(request: Request, refresh_token: str, db: Session = Depends(get_db)):
     """
     Refresh access token using refresh token
 

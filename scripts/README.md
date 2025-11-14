@@ -30,7 +30,7 @@ Inicia el entorno de desarrollo completo con hot-reload.
 ---
 
 ### 💾 backup-db.sh
-Crea backups comprimidos de la base de datos PostgreSQL.
+Crea backups comprimidos de la base de datos PostgreSQL (versión básica Docker).
 
 **Uso:**
 ```bash
@@ -50,6 +50,119 @@ gunzip -c backups/protein_docking_YYYYMMDD_HHMMSS.sql.gz | \
 ```
 
 **Ubicación:** `./backups/`
+
+---
+
+### 💾 backup_database.sh (Versión Avanzada)
+Sistema completo de backup con verificación y rotación automática.
+
+**Uso:**
+```bash
+# Backup básico
+./scripts/backup_database.sh
+
+# Con directorio personalizado
+BACKUP_DIR=/mnt/backups ./scripts/backup_database.sh
+
+# Con retención personalizada
+RETENTION_DAYS=30 ./scripts/backup_database.sh
+```
+
+**Características:**
+- Backup con `pg_dump` nativo (no requiere Docker)
+- Compresión máxima (gzip -9)
+- Verificación de integridad del archivo
+- Rotación automática configurable
+- Logs detallados
+- Soporte para entornos production/staging
+
+**Variables de configuración:**
+```bash
+BACKUP_DIR=/custom/path      # Directorio de backups
+RETENTION_DAYS=14            # Días de retención
+POSTGRES_HOST=localhost      # Host de PostgreSQL
+POSTGRES_PORT=5432           # Puerto
+POSTGRES_DB=protein_docking  # Nombre de la BD
+POSTGRES_USER=postgres       # Usuario
+POSTGRES_PASSWORD=secret     # Password
+```
+
+---
+
+### 🔄 restore_database.sh
+Restauración interactiva de backups con safety checks.
+
+**Uso:**
+```bash
+# Modo interactivo (selección de archivo)
+./scripts/restore_database.sh
+
+# Restaurar archivo específico
+./scripts/restore_database.sh /path/to/backup.sql.gz
+
+# Por nombre de archivo
+./scripts/restore_database.sh protein_docking_20240101_120000.sql.gz
+```
+
+**Características:**
+- Selección interactiva de backups
+- Confirmación antes de restaurar
+- Backup de seguridad pre-restauración
+- Verificación post-restauración
+- Drop y recreación de base de datos
+- Logs detallados del proceso
+
+**⚠️ ADVERTENCIAS:**
+- El restore DROP la base de datos actual
+- Crea un backup de seguridad automáticamente
+- Requiere confirmación explícita (escribir "yes")
+
+---
+
+### ⏰ setup_backup_cron.sh
+Configuración de backups automáticos vía cron.
+
+**Uso:**
+```bash
+# Setup diario a las 2 AM (default)
+./scripts/setup_backup_cron.sh
+
+# Horario personalizado
+CRON_TIME="0 3 * * *" ./scripts/setup_backup_cron.sh
+```
+
+**Schedules comunes:**
+```bash
+# Cada 6 horas
+CRON_TIME="0 */6 * * *" ./scripts/setup_backup_cron.sh
+
+# Semanal (Domingo a las 3 AM)
+CRON_TIME="0 3 * * 0" ./scripts/setup_backup_cron.sh
+
+# Mensual (día 1 a las 2 AM)
+CRON_TIME="0 2 1 * *" ./scripts/setup_backup_cron.sh
+```
+
+**Monitoreo:**
+```bash
+# Ver logs en tiempo real
+tail -f /var/log/protein-docking-backup.log
+
+# Últimas 100 líneas
+tail -n 100 /var/log/protein-docking-backup.log
+```
+
+**Gestión del cron:**
+```bash
+# Ver crontab actual
+crontab -l
+
+# Editar manualmente
+crontab -e
+
+# Eliminar backup automático
+crontab -l | grep -v backup_database.sh | crontab -
+```
 
 ---
 

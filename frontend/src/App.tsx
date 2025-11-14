@@ -2,6 +2,7 @@ import { Routes, Route, Navigate } from 'react-router-dom'
 import { lazy, Suspense } from 'react'
 import { useAuthStore } from '@/store/authStore'
 import { useSocket } from '@/hooks/useSocket'
+import ErrorBoundary from '@/components/ErrorBoundary'
 
 // Eager load landing page (first paint)
 import { LandingPage } from '@/pages/LandingPage'
@@ -26,33 +27,44 @@ function App() {
   useSocket()
 
   return (
-    <Suspense fallback={<PageLoader />}>
-      <Routes>
-        {/* Public Routes */}
-        <Route path="/" element={<LandingPage />} />
-        <Route
-          path="/login"
-          element={isAuthenticated ? <Navigate to="/dashboard" replace /> : <LoginPage />}
-        />
-        <Route
-          path="/register"
-          element={isAuthenticated ? <Navigate to="/dashboard" replace /> : <RegisterPage />}
-        />
+    <ErrorBoundary
+      onError={(error, errorInfo) => {
+        // Log to console in development
+        if (import.meta.env.DEV) {
+          console.error('Application Error:', error);
+          console.error('Error Info:', errorInfo);
+        }
+        // TODO: Send to error tracking service (e.g., Sentry) in production
+      }}
+    >
+      <Suspense fallback={<PageLoader />}>
+        <Routes>
+          {/* Public Routes */}
+          <Route path="/" element={<LandingPage />} />
+          <Route
+            path="/login"
+            element={isAuthenticated ? <Navigate to="/dashboard" replace /> : <LoginPage />}
+          />
+          <Route
+            path="/register"
+            element={isAuthenticated ? <Navigate to="/dashboard" replace /> : <RegisterPage />}
+          />
 
-        {/* Protected Routes */}
-        <Route
-          path="/dashboard"
-          element={isAuthenticated ? <DashboardPage /> : <Navigate to="/login" replace />}
-        />
-        <Route
-          path="/upload"
-          element={isAuthenticated ? <UploadPage /> : <Navigate to="/login" replace />}
-        />
+          {/* Protected Routes */}
+          <Route
+            path="/dashboard"
+            element={isAuthenticated ? <DashboardPage /> : <Navigate to="/login" replace />}
+          />
+          <Route
+            path="/upload"
+            element={isAuthenticated ? <UploadPage /> : <Navigate to="/login" replace />}
+          />
 
-        {/* 404 - Redirect to landing */}
-        <Route path="*" element={<Navigate to="/" replace />} />
-      </Routes>
-    </Suspense>
+          {/* 404 - Redirect to landing */}
+          <Route path="*" element={<Navigate to="/" replace />} />
+        </Routes>
+      </Suspense>
+    </ErrorBoundary>
   )
 }
 
