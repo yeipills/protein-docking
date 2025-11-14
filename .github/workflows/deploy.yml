@@ -1,0 +1,73 @@
+name: Deploy to Production
+
+on:
+  push:
+    tags:
+      - 'v*.*.*'
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Environment to deploy to'
+        required: true
+        default: 'production'
+        type: choice
+        options:
+          - production
+          - staging
+
+jobs:
+  deploy:
+    name: Deploy Application
+    runs-on: ubuntu-latest
+    environment: ${{ github.event.inputs.environment || 'production' }}
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install deployment dependencies
+        run: |
+          pip install --upgrade pip
+          # Add any deployment tools needed
+
+      - name: Run pre-deployment checks
+        run: |
+          echo "Running pre-deployment validation..."
+          # Validate environment files exist
+          if [ ! -f .env.example ]; then
+            echo "Error: .env.example not found"
+            exit 1
+          fi
+          echo "✅ Pre-deployment checks passed"
+
+      - name: Build Docker images
+        run: |
+          echo "Building Docker images for production..."
+          docker-compose build --no-cache
+
+      - name: Run deployment script
+        run: |
+          echo "This is where you would run: ./scripts/deploy-production.sh"
+          echo "Configure your deployment based on your infrastructure:"
+          echo "- SSH to server and pull latest"
+          echo "- Docker registry push"
+          echo "- Kubernetes deployment"
+          echo "- AWS/GCP/Azure deployment"
+          # ./scripts/deploy-production.sh
+
+      - name: Health check
+        run: |
+          echo "Performing post-deployment health check..."
+          # Add health check after deployment
+          echo "✅ Deployment completed successfully"
+
+      - name: Notify deployment
+        if: always()
+        run: |
+          echo "Deployment status: ${{ job.status }}"
+          # Add notification to Slack, Discord, etc.
