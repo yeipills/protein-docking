@@ -5,9 +5,15 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc && vite build",
+    "build:analyze": "tsc && vite build --mode analyze",
     "preview": "vite preview",
     "lint": "eslint . --ext ts,tsx --report-unused-disable-directives --max-warnings 0",
-    "format": "prettier --write \"src/**/*.{ts,tsx,css}\""
+    "lint:fix": "eslint . --ext ts,tsx --fix",
+    "format": "prettier --write \"src/**/*.{ts,tsx,css}\"",
+    "format:check": "prettier --check \"src/**/*.{ts,tsx,css}\"",
+    "type-check": "tsc --noEmit",
+    "test": "echo \"Error: no tests specified\" && exit 0",
+    "test:run": "echo \"Error: no tests specified\" && exit 0"
   },
   "dependencies": {
     "react": "^18.3.1",

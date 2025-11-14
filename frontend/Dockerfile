@@ -8,18 +8,27 @@ FROM node:20-alpine as builder
 
 WORKDIR /app
 
-# Copy package files
+# Copy package files FIRST for better layer caching
+# If package.json hasn't changed, Docker will use cached npm install
 COPY package.json package-lock.json ./
 
-# Install dependencies
-RUN npm ci --silent
+# Install dependencies (cached if package files unchanged)
+# --silent reduces output noise
+# --prefer-offline speeds up repeated builds
+RUN npm ci --silent --prefer-offline
 
-# Copy application source
+# Copy application source (separate layer for better caching)
+# Only rebuild if source code changes, not on every Docker build
 COPY . .
 
 # Build the application with Vite
-# This creates optimized production bundle in /app/dist
+# Creates optimized production bundle with code splitting in /app/dist
 RUN npm run build
+
+# Verify build output exists
+RUN ls -la /app/dist && \
+    echo "Build successful - dist size:" && \
+    du -sh /app/dist
 
 # =====================================
 # Stage 2: Production - Serve with Nginx
