@@ -110,6 +110,26 @@ file_upload_size_bytes = Histogram(
 )
 
 # ==========================================
+# CACHE METRICS
+# ==========================================
+
+cache_operations = Counter(
+    'cache_operations_total',
+    'Total cache operations',
+    ['operation']  # hit, miss, set, error, invalidate
+)
+
+cache_keys_total = Gauge(
+    'cache_keys_total',
+    'Total number of keys in cache'
+)
+
+cache_memory_bytes = Gauge(
+    'cache_memory_bytes',
+    'Memory used by cache in bytes'
+)
+
+# ==========================================
 # APPLICATION INFO
 # ==========================================
 

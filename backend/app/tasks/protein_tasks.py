@@ -10,6 +10,8 @@ from app.database import SessionLocal
 from app.models.job import Job, JobStatus
 from app.models.protein import Protein
 from app.core.logging import get_logger
+from app.services.job_service import invalidate_job_cache
+from app.services.protein_service import invalidate_protein_cache
 
 logger = get_logger(__name__)
 
@@ -115,6 +117,10 @@ def process_part_one(self, job_id: int):
 
         db.commit()
 
+        # Invalidate caches after successful completion
+        invalidate_job_cache(job_id, job.user_id)
+        invalidate_protein_cache(protein.id, protein.user_id)
+
         logger.info(f"Part One completed for job {job_id} in {processing_time}s")
 
         return {
@@ -131,6 +137,9 @@ def process_part_one(self, job_id: int):
         job.error_message = str(e)
         job.completed_at = datetime.utcnow()
         db.commit()
+
+        # Invalidate caches even on failure
+        invalidate_job_cache(job_id, job.user_id)
 
         return {"error": str(e)}
 
@@ -225,6 +234,10 @@ def process_part_two(self, job_id: int):
 
         db.commit()
 
+        # Invalidate caches after successful completion
+        invalidate_job_cache(job_id, job.user_id)
+        invalidate_protein_cache(protein.id, protein.user_id)
+
         logger.info(f"Part Two completed for job {job_id} in {processing_time}s")
 
         return {
@@ -241,5 +254,8 @@ def process_part_two(self, job_id: int):
         job.error_message = str(e)
         job.completed_at = datetime.utcnow()
         db.commit()
+
+        # Invalidate caches even on failure
+        invalidate_job_cache(job_id, job.user_id)
 
         return {"error": str(e)}
