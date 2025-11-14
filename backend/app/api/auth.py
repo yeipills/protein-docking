@@ -24,6 +24,8 @@ from app.core.rate_limit import (
     limiter,
     RateLimitTier
 )
+from app.core.audit import log_from_request
+from app.models.audit_log import AuditAction, AuditSeverity
 
 logger = get_logger(__name__)
 router = APIRouter()
@@ -72,6 +74,19 @@ async def register(request: Request, user_data: UserCreate, db: Session = Depend
     db.commit()
     db.refresh(new_user)
 
+    # Audit log
+    log_from_request(
+        db=db,
+        request=request,
+        action=AuditAction.USER_CREATE,
+        user_id=new_user.id,
+        username=new_user.username,
+        resource_type="user",
+        resource_id=str(new_user.id),
+        description=f"User registered: {new_user.username}",
+        metadata={"email": new_user.email, "full_name": new_user.full_name}
+    )
+
     logger.info(f"New user registered: {new_user.username} (ID: {new_user.id})")
     return new_user
 
@@ -97,16 +112,53 @@ async def login(request: Request, login_data: UserLogin, db: Session = Depends(g
 
     if not user or not verify_password(login_data.password, user.hashed_password):
         logger.warning(f"Failed login attempt for username: {login_data.username}")
+
+        # Audit log failed login
+        log_from_request(
+            db=db,
+            request=request,
+            action=AuditAction.LOGIN_FAILURE,
+            username=login_data.username,
+            severity=AuditSeverity.WARNING,
+            status="failure",
+            description=f"Failed login attempt for {login_data.username}",
+            error_message="Incorrect username or password"
+        )
+
         raise UnauthorizedException(detail="Incorrect username or password")
 
     if not user.is_active:
         logger.warning(f"Login attempt by inactive user: {login_data.username}")
+
+        # Audit log inactive user login attempt
+        log_from_request(
+            db=db,
+            request=request,
+            action=AuditAction.LOGIN_FAILURE,
+            user_id=user.id,
+            username=user.username,
+            severity=AuditSeverity.WARNING,
+            status="failure",
+            description=f"Login attempt by inactive user {user.username}",
+            error_message="User account is inactive"
+        )
+
         raise UnauthorizedException(detail="User account is inactive")
 
     # Create tokens
     token_data = {"user_id": user.id, "username": user.username}
     access_token = create_access_token(token_data)
     refresh_token = create_refresh_token(token_data)
+
+    # Audit log successful login
+    log_from_request(
+        db=db,
+        request=request,
+        action=AuditAction.LOGIN_SUCCESS,
+        user_id=user.id,
+        username=user.username,
+        description=f"User {user.username} logged in successfully"
+    )
 
     logger.info(f"User logged in: {user.username} (ID: {user.id})")
 

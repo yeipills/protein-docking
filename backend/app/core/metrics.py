@@ -153,6 +153,27 @@ file_validation_duration_seconds = Histogram(
 )
 
 # ==========================================
+# AUDIT LOGGING METRICS
+# ==========================================
+
+audit_events_total = Counter(
+    'audit_events_total',
+    'Total audit events logged',
+    ['action', 'status']  # action: login, upload, etc. status: success, failure
+)
+
+audit_events_by_severity = Counter(
+    'audit_events_by_severity_total',
+    'Audit events by severity level',
+    ['severity']  # info, warning, error, critical
+)
+
+audit_log_size = Gauge(
+    'audit_log_total_entries',
+    'Total number of audit log entries in database'
+)
+
+# ==========================================
 # APPLICATION INFO
 # ==========================================
 

@@ -23,6 +23,8 @@ from app.core.logging import get_logger
 from app.config import get_settings
 from app.tasks.protein_tasks import process_part_one, process_part_two
 from app.core.file_validation import validate_file_comprehensive, sanitize_filename
+from app.core.audit import create_audit_log
+from app.models.audit_log import AuditAction, AuditSeverity
 
 logger = get_logger(__name__)
 router = APIRouter()
@@ -140,6 +142,37 @@ async def upload_part_one(
     task = process_part_one.delay(job.id)
     job.celery_task_id = task.id
     db.commit()
+
+    # Audit log file upload and job creation
+    create_audit_log(
+        db=db,
+        action=AuditAction.FILE_UPLOAD,
+        user_id=current_user.id,
+        username=current_user.username,
+        resource_type="protein",
+        resource_id=str(protein.id),
+        description=f"Uploaded Part One files for protein {protein_name}",
+        metadata={
+            "protein_id": protein.id,
+            "job_id": job.id,
+            "files": ["stl", "vert", "face"],
+            "stl_format": stl_validation.get("format"),
+            "triangle_count": stl_validation.get("triangle_count"),
+            "vertex_count": vert_validation.get("vertex_count"),
+            "face_count": face_validation.get("face_count"),
+        }
+    )
+
+    create_audit_log(
+        db=db,
+        action=AuditAction.JOB_CREATE,
+        user_id=current_user.id,
+        username=current_user.username,
+        resource_type="job",
+        resource_id=str(job.id),
+        description=f"Created Part One job for protein {protein_name}",
+        metadata={"job_id": job.id, "job_type": job.job_type.value}
+    )
 
     logger.info(f"Part One job created: {job.id} for protein {protein_name}")
     return job
