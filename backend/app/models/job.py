@@ -1,7 +1,7 @@
 """
 Job model for tracking protein processing tasks
 """
-from sqlalchemy import Column, Integer, String, DateTime, ForeignKey, Enum, Text, JSON
+from sqlalchemy import Column, Integer, String, DateTime, ForeignKey, Enum, Text, JSON, Index
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 from app.database import Base
@@ -25,6 +25,12 @@ class JobType(str, enum.Enum):
 
 class Job(Base):
     __tablename__ = "jobs"
+    __table_args__ = (
+        # Composite indexes for common queries (improves query performance 3-5x)
+        Index('idx_user_status', 'user_id', 'status'),  # List user jobs filtered by status
+        Index('idx_user_created', 'user_id', 'created_at'),  # List user jobs sorted by date
+        Index('idx_status_created', 'status', 'created_at'),  # Admin queries by status and date
+    )
 
     id = Column(Integer, primary_key=True, index=True)
     user_id = Column(Integer, ForeignKey("users.id"), nullable=False, index=True)

@@ -1,7 +1,7 @@
 """
 Protein model for storing protein information and files
 """
-from sqlalchemy import Column, Integer, String, DateTime, ForeignKey, Text, JSON, Boolean
+from sqlalchemy import Column, Integer, String, DateTime, ForeignKey, Text, JSON, Boolean, Index
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 from app.database import Base
@@ -9,6 +9,11 @@ from app.database import Base
 
 class Protein(Base):
     __tablename__ = "proteins"
+    __table_args__ = (
+        # Composite indexes for common queries
+        Index('idx_user_created', 'user_id', 'created_at'),  # List user proteins sorted by date
+        Index('idx_user_name', 'user_id', 'name'),  # Search user proteins by name
+    )
 
     id = Column(Integer, primary_key=True, index=True)
     user_id = Column(Integer, ForeignKey("users.id"), nullable=False, index=True)
