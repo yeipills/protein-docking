@@ -20,7 +20,10 @@ from app.core.logging import (
     get_request_id
 )
 from app.core.rate_limit import limiter, user_limiter, RateLimitTier
+from app.core.env_validation import startup_validation
+from app.core.metrics import track_request_metrics, http_requests_in_progress
 from app.api import api_router
+from prometheus_client import make_asgi_app
 
 # Load settings
 settings = get_settings()
@@ -36,6 +39,9 @@ async def lifespan(app: FastAPI):
     # Startup
     logger.info("Starting Protein Docking Platform API")
     logger.info(f"Environment: {settings.ENVIRONMENT}")
+
+    # Validate environment configuration
+    startup_validation()
 
     # Create database tables
     logger.info("Creating database tables...")
@@ -153,11 +159,13 @@ app.add_middleware(
 )
 
 
-# Request logging middleware with context tracing
+# Request logging, metrics and tracing middleware
 @app.middleware("http")
-async def log_requests(request: Request, call_next):
-    """Log all requests with context tracing"""
+async def log_and_track_requests(request: Request, call_next):
+    """Log all requests, track metrics and add request tracing"""
     start_time = time.time()
+    method = request.method
+    path = request.url.path
 
     # Get or generate request ID
     request_id = request.headers.get('X-Request-ID', None)
@@ -171,14 +179,16 @@ async def log_requests(request: Request, call_next):
     request_id = set_request_context(
         request_id=request_id,
         user_id=user_id,
-        request_path=request.url.path,
-        request_method=request.method
+        request_path=path,
+        request_method=method
     )
 
-    # Add request ID to response headers
+    # Track in-progress requests
+    http_requests_in_progress.labels(method=method, endpoint=path).inc()
+
     try:
-        # Log request
-        logger.info(f"Request started")
+        # Log request start
+        logger.info("Request started")
 
         # Process request
         response = await call_next(request)
@@ -186,27 +196,35 @@ async def log_requests(request: Request, call_next):
         # Add request ID to response headers
         response.headers["X-Request-ID"] = request_id
 
+        # Calculate duration
+        duration = time.time() - start_time
+
         # Log response
-        process_time = time.time() - start_time
         logger.info(
             f"Request completed - "
             f"Status: {response.status_code} - "
-            f"Duration: {process_time:.3f}s"
+            f"Duration: {duration:.3f}s"
         )
+
+        # Track metrics (exclude /metrics endpoint from tracking itself)
+        if path != "/metrics":
+            track_request_metrics(method, path, response.status_code, duration)
 
         return response
 
     except Exception as e:
-        process_time = time.time() - start_time
+        duration = time.time() - start_time
         logger.error(
             f"Request failed - "
             f"Error: {str(e)} - "
-            f"Duration: {process_time:.3f}s",
+            f"Duration: {duration:.3f}s",
             exc_info=True
         )
         raise
 
     finally:
+        # Decrement in-progress counter
+        http_requests_in_progress.labels(method=method, endpoint=path).dec()
         # Clear request context
         clear_request_context()
 
@@ -303,6 +321,10 @@ async def root(request: Request):
 
 # Include API routes
 app.include_router(api_router, prefix="/api/v1")
+
+# Prometheus metrics endpoint
+metrics_app = make_asgi_app()
+app.mount("/metrics", metrics_app)
 
 
 # Global exception handler
