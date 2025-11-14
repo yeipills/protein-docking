@@ -16,8 +16,8 @@ services:
       POSTGRES_DB: ${POSTGRES_DB}
     volumes:
       - postgres_data:/var/lib/postgresql/data
-    ports:
-      - "5432:5432"
+    # ports:
+    #   - "5432:5432"  # ⚠️ PRODUCTION: DO NOT EXPOSE - use docker-compose.dev.yml for dev
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER}"]
       interval: 10s
@@ -36,8 +36,8 @@ services:
     command: redis-server --appendonly yes
     volumes:
       - redis_data:/data
-    ports:
-      - "6379:6379"
+    # ports:
+    #   - "6379:6379"  # ⚠️ PRODUCTION: DO NOT EXPOSE - use docker-compose.dev.yml for dev
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
       interval: 10s
@@ -63,8 +63,8 @@ services:
       - uploads:/app/uploads
       - results:/app/results
       - logs:/app/logs
-    ports:
-      - "5000:5000"
+    # ports:
+    #   - "5000:5000"  # ⚠️ PRODUCTION: Accessed via Nginx proxy only
     depends_on:
       postgres:
         condition: service_healthy
@@ -88,8 +88,8 @@ services:
     volumes:
       - ./backend/socket_server:/app/socket_server
       - logs:/app/logs
-    ports:
-      - "8080:8080"
+    # ports:
+    #   - "8080:8080"  # ⚠️ PRODUCTION: Accessed via Nginx proxy only
     depends_on:
       - backend
     networks:
@@ -121,18 +121,19 @@ services:
     restart: unless-stopped
 
   # =====================================
-  # Frontend - React
+  # Frontend - React + TypeScript + Vite
   # =====================================
   frontend:
     build:
-      context: ./Frontend
+      context: ./frontend
       dockerfile: Dockerfile
     container_name: protein_docking_frontend
     environment:
-      - REACT_APP_API_URL=http://localhost/api/v1
-      - REACT_APP_SOCKET_URL=http://localhost
-    ports:
-      - "3000:3000"
+      - VITE_API_URL=${VITE_API_URL:-http://localhost/api/v1}
+      - VITE_SOCKET_URL=${VITE_SOCKET_URL:-http://localhost}
+      - VITE_ENV=production
+    # ports:
+    #   - "3000:3000"  # ⚠️ PRODUCTION: Served via Nginx on port 80/443
     depends_on:
       - backend
       - socket
