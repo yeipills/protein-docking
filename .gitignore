@@ -58,8 +58,17 @@ node_modules/
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
-frontend/build/
-frontend_new/build/
+pnpm-debug.log*
+package-lock.json
+frontend/dist/
+frontend/.vite/
+frontend/coverage/
+.eslintcache
+
+# Obsolete directories (legacy code - not used)
+Backend/
+Frontend/
+frontend_new/
 
 # Docker
 *.pid

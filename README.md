@@ -98,6 +98,13 @@ cp .env.example .env
 ```
 
 3. **Start development environment**
+
+**Option A - Using script (recommended):**
+```bash
+./scripts/dev-start.sh
+```
+
+**Option B - Manual:**
 ```bash
 docker-compose -f docker-compose.dev.yml up --build
 ```
@@ -114,13 +121,21 @@ docker-compose -f docker-compose.dev.yml up --build
 ```bash
 cp .env.example .env
 # Edit .env with production values:
-# - Set strong passwords
+# - Set strong passwords (NEVER use defaults)
 # - Configure JWT secrets (minimum 64 characters)
 # - Set ENVIRONMENT=production
-# - Configure domain and SSL
+# - Set ALLOWED_ORIGINS to your domain
+# - Configure VITE_API_URL and VITE_SOCKET_URL with your domain
 ```
 
-2. **Start production services**
+2. **Deploy to production**
+
+**Option A - Using deployment script (recommended):**
+```bash
+./scripts/deploy-production.sh
+```
+
+**Option B - Manual:**
 ```bash
 docker-compose up -d --build
 ```
@@ -308,6 +323,12 @@ protein-docking/
 ├── nginx/                    # Nginx configuration
 │   ├── nginx.conf
 │   └── Dockerfile
+├── scripts/                  # Utility scripts
+│   ├── dev-start.sh         # Start development environment
+│   ├── deploy-production.sh # Production deployment
+│   ├── backup-db.sh         # Database backup
+│   ├── run-tests.sh         # Test suite runner
+│   └── README.md            # Scripts documentation
 ├── docker/
 ├── docs/
 ├── docker-compose.yml        # Production
@@ -434,33 +455,77 @@ docker-compose up -d --scale celery_worker=5
 5. **CDN**: Serve static assets via CDN
 6. **Monitoring**: Implement comprehensive monitoring
 
+## Utility Scripts
+
+The project includes several utility scripts for common operations:
+
+### 🔧 Development Environment
+```bash
+./scripts/dev-start.sh
+```
+Starts all services in development mode with hot-reload, runs migrations, and displays useful URLs.
+
+### 💾 Database Backup
+```bash
+./scripts/backup-db.sh
+```
+Creates timestamped compressed backups. Automatically cleans up old backups (>7 days).
+
+### 🚀 Production Deployment
+```bash
+./scripts/deploy-production.sh
+```
+Deploys to production with pre-flight checks:
+- Validates environment configuration
+- Checks for default passwords
+- Creates database backup
+- Runs health checks after deployment
+
+### 🧪 Run Tests
+```bash
+./scripts/run-tests.sh           # All tests
+./scripts/run-tests.sh backend   # Backend only
+./scripts/run-tests.sh frontend  # Frontend only
+./scripts/run-tests.sh lint      # Linting only
+```
+
+See [scripts/README.md](scripts/README.md) for detailed documentation.
+
+---
+
 ## Development
 
-### Running Tests (TODO)
+### Running Tests
 ```bash
-cd backend
-pytest tests/
+# Run all tests with coverage
+./scripts/run-tests.sh
+
+# Backend tests only
+docker-compose -f docker-compose.dev.yml exec backend pytest tests/ -v --cov=app
 ```
 
 ### Code Quality
 ```bash
-# Format code
-black app/
+# Backend
+docker-compose exec backend flake8 app/ --max-line-length=100
+docker-compose exec backend mypy app/ --ignore-missing-imports
 
-# Lint
-flake8 app/
-
-# Type checking
-mypy app/
+# Frontend
+cd frontend
+npm run lint
+npm run format
 ```
 
 ### Database Migrations
 ```bash
-# Create migration
-alembic revision --autogenerate -m "description"
+# Create new migration
+docker-compose exec backend alembic revision --autogenerate -m "description"
 
 # Apply migrations
-alembic upgrade head
+docker-compose exec backend alembic upgrade head
+
+# View migration history
+docker-compose exec backend alembic history
 ```
 
 ## Platform Status

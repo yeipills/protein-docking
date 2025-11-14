@@ -69,6 +69,19 @@ Por defecto está configurado correctamente. Solo editar si cambias puertos.
 
 ### 3️⃣ Iniciar con Docker (Opción Recomendada)
 
+**✨ Opción A - Script Automatizado (Recomendado):**
+```bash
+./scripts/dev-start.sh
+```
+
+Este script:
+- ✅ Verifica configuración
+- ✅ Construye e inicia todos los servicios
+- ✅ Ejecuta migraciones automáticamente
+- ✅ Muestra URLs y comandos útiles
+
+**Opción B - Manual:**
+
 **Modo Desarrollo** (con hot-reload):
 ```bash
 docker-compose -f docker-compose.dev.yml up -d --build
@@ -325,6 +338,13 @@ protein-docking/
 │   ├── .prettierrc            # ✅ Prettier config
 │   └── .env                   # ✅ TU CONFIGURACIÓN (opcional)
 │
+├── scripts/                   # ✅ Scripts de utilidad
+│   ├── dev-start.sh           # ✅ Inicio rápido desarrollo
+│   ├── deploy-production.sh   # ✅ Deploy a producción
+│   ├── backup-db.sh           # ✅ Backup automático
+│   ├── run-tests.sh           # ✅ Tests automatizados
+│   └── README.md              # ✅ Documentación scripts
+│
 └── nginx/
     ├── nginx.conf             # ✅ Reverse proxy
     └── Dockerfile             # ✅ Docker nginx
@@ -340,8 +360,10 @@ Antes de desplegar a producción, verifica:
 - [ ] `JWT_SECRET_KEY` tiene mínimo 64 caracteres aleatorios
 - [ ] `POSTGRES_PASSWORD` es fuerte (16+ caracteres)
 - [ ] `ENVIRONMENT=production` en `.env`
+- [ ] `ALLOWED_ORIGINS` configurado con tu dominio (NO localhost)
+- [ ] `VITE_API_URL` y `VITE_SOCKET_URL` configurados con tu dominio
 - [ ] Configuraste SSL/HTTPS (Let's Encrypt)
-- [ ] Configuraste backups automáticos de PostgreSQL
+- [ ] Configuraste backups automáticos de PostgreSQL (usa `./scripts/backup-db.sh`)
 - [ ] Configuraste firewall (solo puertos 80, 443 abiertos)
 - [ ] Revisaste logs para errores
 - [ ] Cambiaste password de usuario admin
@@ -373,7 +395,10 @@ docker-compose exec backend bash
 ### Base de Datos
 
 ```bash
-# Backup
+# Backup (script automatizado - recomendado)
+./scripts/backup-db.sh
+
+# Backup manual
 docker-compose exec postgres pg_dump -U protein_user protein_docking > backup.sql
 
 # Restore
@@ -405,6 +430,7 @@ Después del setup:
 1. **Leer la documentación**:
    - `README.md` - Visión general
    - `DOCKER.md` - Guía detallada de Docker
+   - `scripts/README.md` - Scripts de utilidad
    - `ALGORITHMS_STATUS.md` - Info sobre algoritmos
 
 2. **Explorar la API**:
