@@ -65,7 +65,8 @@ COPY ./socket_server /app/socket_server
 
 # Copy compiled Cython extensions from builder
 # These .so files provide 4-6x performance boost for layer evaluation
-COPY --from=builder /build/app/algorithms/*.so /app/app/algorithms/ 2>/dev/null || true
+RUN --mount=type=bind,from=builder,source=/build/app/algorithms,target=/tmp/build \
+    cp /tmp/build/*.so /app/app/algorithms/ 2>/dev/null || true
 
 # Create directories for uploads and logs
 RUN mkdir -p /app/uploads /app/results /app/logs

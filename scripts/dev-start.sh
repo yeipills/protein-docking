@@ -36,19 +36,19 @@ fi
 
 # Stop any running containers
 echo -e "${YELLOW}Stopping any running containers...${NC}"
-docker-compose -f docker-compose.dev.yml down 2>/dev/null || true
+docker compose -f docker-compose.dev.yml down 2>/dev/null || true
 
 # Pull latest images
 echo -e "\n${YELLOW}Pulling latest base images...${NC}"
-docker-compose -f docker-compose.dev.yml pull
+docker  compose -f docker-compose.dev.yml pull
 
 # Build services
 echo -e "\n${YELLOW}Building services...${NC}"
-docker-compose -f docker-compose.dev.yml build
+docker compose -f docker-compose.dev.yml build
 
 # Start services
 echo -e "\n${YELLOW}Starting services...${NC}"
-docker-compose -f docker-compose.dev.yml up -d
+docker compose -f docker-compose.dev.yml up -d
 
 # Wait for database to be ready
 echo -e "\n${YELLOW}Waiting for PostgreSQL to be ready...${NC}"
@@ -56,13 +56,13 @@ sleep 5
 
 # Run database migrations
 echo -e "\n${YELLOW}Running database migrations...${NC}"
-docker-compose -f docker-compose.dev.yml exec -T backend alembic upgrade head || {
+docker compose -f docker-compose.dev.yml exec -T backend alembic upgrade head || {
     echo -e "${YELLOW}No migrations to run or Alembic not initialized${NC}"
 }
 
 # Show service status
 echo -e "\n${GREEN}Services started successfully!${NC}\n"
-docker-compose -f docker-compose.dev.yml ps
+docker compose -f docker-compose.dev.yml ps
 
 # Show useful information
 echo -e "\n${BLUE}================================${NC}"

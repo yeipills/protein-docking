@@ -4,8 +4,12 @@ Database connection and session management
 from sqlalchemy import create_engine
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker, Session
+from sqlalchemy.exc import ProgrammingError
 from typing import Generator
 from app.config import get_settings
+from app.core.logging import get_logger
+
+logger = get_logger(__name__)
 
 settings = get_settings()
 
@@ -45,7 +49,14 @@ def get_db() -> Generator[Session, None, None]:
 
 def create_tables():
     """Create all tables in the database"""
-    Base.metadata.create_all(bind=engine)
+    try:
+        Base.metadata.create_all(bind=engine, checkfirst=True)
+    except ProgrammingError as e:
+        # Handle duplicate table/index errors during development hot-reload
+        if "already exists" in str(e):
+            logger.warning(f"Database objects already exist (likely due to hot-reload): {e}")
+        else:
+            raise
 
 
 def drop_tables():
