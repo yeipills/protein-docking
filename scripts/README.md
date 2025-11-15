@@ -166,6 +166,82 @@ crontab -l | grep -v backup_database.sh | crontab -
 
 ---
 
+### 🛡️ security_scan.py
+Escaneo completo de vulnerabilidades de seguridad para backend y frontend.
+
+**Uso:**
+```bash
+# Escaneo básico
+python scripts/security_scan.py
+
+# Escaneo con auto-fix
+python scripts/security_scan.py --fix
+
+# Generar reporte JSON
+python scripts/security_scan.py --json
+
+# Completo: scan + fix + report
+python scripts/security_scan.py --fix --json
+```
+
+**Características:**
+- Escanea dependencias Python con pip-audit
+- Analiza código Python con Bandit
+- Escanea dependencias npm
+- Detecta vulnerabilidades críticas, altas, medias y bajas
+- Auto-remediación de problemas conocidos
+- Genera reportes JSON detallados
+
+**Lo que detecta:**
+- CVEs conocidos en dependencias
+- Inyección SQL, XSS, CSRF
+- Configuraciones inseguras
+- Criptografía débil
+- Command injection
+- Deserialización insegura
+- Hardcoded secrets
+
+**Exit codes:**
+- `0` - Sin vulnerabilidades críticas/altas
+- `1` - Vulnerabilidades altas encontradas
+- `2` - Vulnerabilidades críticas encontradas
+
+**Requisitos:**
+```bash
+pip install pip-audit bandit
+```
+
+---
+
+### 🔧 quick_fix.sh
+Aplicación rápida de parches de seguridad críticos.
+
+**Uso:**
+```bash
+./scripts/quick_fix.sh
+```
+
+**Lo que hace:**
+- ✓ Backup automático de requirements.txt
+- ✓ Actualiza python-socketio (fix RCE CVE-2025-61765)
+- ✓ Actualiza flask (fix key rotation CVE-2025-47278)
+- ✓ Actualiza flask-cors (fix CORS bypass)
+- ✓ Actualiza requests (fix credential leak CVE-2024-47081)
+- ✓ Actualiza python-multipart (fix DoS CVE-2024-53981)
+- ✓ Corrige uso de MD5 en cache.py → SHA256
+- ✓ Actualiza dependencias de frontend (npm audit fix)
+- ✓ Ejecuta verificación post-fix
+
+**Cuándo usarlo:**
+- Inmediatamente después de un security audit
+- Cuando pip-audit reporta vulnerabilidades críticas
+- Antes de deployment a producción
+- Como parte de maintenance mensual
+
+**Nota:** Crear backup de database antes de ejecutar en producción
+
+---
+
 ### 🚀 deploy-production.sh
 Despliega la aplicación a producción con validaciones de seguridad.
 
@@ -248,6 +324,9 @@ Ejecuta suite completa de tests para backend y frontend.
 
 # 3. Crear backup antes de cambios mayores
 ./scripts/backup-db.sh
+
+# 4. Escaneo de seguridad periódico (semanal)
+python scripts/security_scan.py
 ```
 
 ### Pre-Deployment
@@ -255,12 +334,36 @@ Ejecuta suite completa de tests para backend y frontend.
 # 1. Ejecutar suite completa de tests
 ./scripts/run-tests.sh
 
-# 2. Verificar que todos pasan
-# 3. Crear backup
+# 2. Escaneo de seguridad
+python scripts/security_scan.py --json
+
+# 3. Aplicar fixes críticos si es necesario
+./scripts/quick_fix.sh
+
+# 4. Verificar que todos pasan
+# 5. Crear backup
 ./scripts/backup-db.sh
 
-# 4. Deploy a producción
+# 6. Deploy a producción
 ./scripts/deploy-production.sh
+```
+
+### Mantenimiento de Seguridad (Mensual)
+```bash
+# 1. Escaneo completo
+python scripts/security_scan.py --json
+
+# 2. Revisar reporte
+cat SECURITY_AUDIT_REPORT.md
+
+# 3. Aplicar actualizaciones
+./scripts/quick_fix.sh
+
+# 4. Re-escanear para verificar
+python scripts/security_scan.py
+
+# 5. Ejecutar tests
+./scripts/run-tests.sh
 ```
 
 ---
