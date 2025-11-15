@@ -25,10 +25,16 @@ from app.core.rate_limit import (
     RateLimitTier
 )
 from app.config import get_settings
+from datetime import datetime, timedelta
 
 logger = get_logger(__name__)
 router = APIRouter()
 settings = get_settings()
+
+# Account lockout constants
+MAX_FAILED_ATTEMPTS = 5  # Lock after 5 failed attempts
+LOCKOUT_DURATION_MINUTES = 30  # Lock for 30 minutes
+FAILED_ATTEMPT_RESET_MINUTES = 15  # Reset failed attempts after 15 minutes of inactivity
 
 
 @router.post("/register", response_model=UserResponse, status_code=status.HTTP_201_CREATED)
@@ -84,6 +90,11 @@ async def login(request: Request, response: Response, login_data: UserLogin, db:
     """
     Login and get access token (stored in httpOnly cookies)
 
+    Implements account lockout policy:
+    - Lock account after 5 failed attempts
+    - Lockout duration: 30 minutes
+    - Reset failed attempts after 15 minutes of inactivity
+
     Args:
         login_data: User login credentials
         db: Database session
@@ -93,18 +104,74 @@ async def login(request: Request, response: Response, login_data: UserLogin, db:
         Token: JWT tokens (access and refresh) - also set as httpOnly cookies
 
     Raises:
-        UnauthorizedException: If credentials are invalid
+        UnauthorizedException: If credentials are invalid or account locked
     """
     # Find user by username
     user = db.query(User).filter(User.username == login_data.username).first()
 
-    if not user or not verify_password(login_data.password, user.hashed_password):
-        logger.warning(f"Failed login attempt for username: {login_data.username}")
+    if not user:
+        logger.warning(f"Failed login attempt for non-existent username: {login_data.username}")
         raise UnauthorizedException(detail="Incorrect username or password")
+
+    # Check if account is locked
+    now = datetime.utcnow()
+    if user.locked_until and user.locked_until > now:
+        time_remaining = (user.locked_until - now).total_seconds() / 60
+        logger.warning(f"Login attempt for locked account: {login_data.username}")
+        raise UnauthorizedException(
+            detail=f"Account is locked due to too many failed login attempts. "
+                   f"Please try again in {int(time_remaining)} minutes."
+        )
+
+    # If lockout period has passed, reset lockout
+    if user.locked_until and user.locked_until <= now:
+        user.locked_until = None
+        user.failed_login_attempts = 0
+        db.commit()
+
+    # Reset failed attempts if enough time has passed since last failure
+    if user.last_failed_login:
+        time_since_last_failure = now - user.last_failed_login
+        if time_since_last_failure > timedelta(minutes=FAILED_ATTEMPT_RESET_MINUTES):
+            user.failed_login_attempts = 0
+            db.commit()
+
+    # Verify password
+    if not verify_password(login_data.password, user.hashed_password):
+        # Increment failed login attempts
+        user.failed_login_attempts += 1
+        user.last_failed_login = now
+
+        # Lock account if max attempts reached
+        if user.failed_login_attempts >= MAX_FAILED_ATTEMPTS:
+            user.locked_until = now + timedelta(minutes=LOCKOUT_DURATION_MINUTES)
+            db.commit()
+            logger.warning(f"Account locked due to {MAX_FAILED_ATTEMPTS} failed attempts: {login_data.username}")
+            raise UnauthorizedException(
+                detail=f"Account has been locked due to too many failed login attempts. "
+                       f"Please try again in {LOCKOUT_DURATION_MINUTES} minutes."
+            )
+
+        db.commit()
+        remaining_attempts = MAX_FAILED_ATTEMPTS - user.failed_login_attempts
+        logger.warning(
+            f"Failed login attempt for {login_data.username}. "
+            f"Attempts: {user.failed_login_attempts}/{MAX_FAILED_ATTEMPTS}"
+        )
+        raise UnauthorizedException(
+            detail=f"Incorrect username or password. "
+                   f"{remaining_attempts} attempts remaining before account lockout."
+        )
 
     if not user.is_active:
         logger.warning(f"Login attempt by inactive user: {login_data.username}")
         raise UnauthorizedException(detail="User account is inactive")
+
+    # Successful login - reset failed attempts
+    user.failed_login_attempts = 0
+    user.last_failed_login = None
+    user.locked_until = None
+    db.commit()
 
     # Create tokens
     token_data = {"user_id": user.id, "username": user.username}
