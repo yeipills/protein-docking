@@ -1,9 +1,19 @@
+import { memo, useMemo } from 'react'
 import { useJobs } from '@/hooks/useJobs'
 import { JobCard } from './JobCard'
 import { Loader2, Inbox } from 'lucide-react'
 
-export function JobList() {
+function JobListComponent() {
   const { data: jobs, isLoading, error } = useJobs()
+
+  // Memoize filtered/sorted jobs if needed in the future
+  const sortedJobs = useMemo(() => {
+    if (!jobs) return []
+    // Sort by created_at descending (newest first)
+    return [...jobs].sort((a, b) =>
+      new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+    )
+  }, [jobs])
 
   if (isLoading) {
     return (
@@ -23,7 +33,7 @@ export function JobList() {
     )
   }
 
-  if (!jobs || jobs.length === 0) {
+  if (!sortedJobs || sortedJobs.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center py-12 bg-white rounded-lg border-2 border-dashed border-gray-300">
         <Inbox className="h-12 w-12 text-gray-400 mb-4" />
@@ -37,9 +47,12 @@ export function JobList() {
 
   return (
     <div className="grid gap-4">
-      {jobs.map((job) => (
+      {sortedJobs.map((job) => (
         <JobCard key={job.id} job={job} />
       ))}
     </div>
   )
 }
+
+// Export memoized component - re-renders only when jobs data changes
+export const JobList = memo(JobListComponent)
