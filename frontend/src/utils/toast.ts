@@ -33,11 +33,18 @@ class ToastManager {
       ${this.getTypeClasses(type)}
     `
 
-    const icon = this.getIcon(type)
-    toast.innerHTML = `
-      ${icon}
-      <span class="text-sm font-medium">${message}</span>
-    `
+    // Create icon element (safe, controlled content)
+    const iconContainer = document.createElement('div')
+    iconContainer.innerHTML = this.getIcon(type)
+
+    // Create message element (safe from XSS)
+    const messageSpan = document.createElement('span')
+    messageSpan.className = 'text-sm font-medium'
+    messageSpan.textContent = message // Use textContent to prevent XSS
+
+    // Append children
+    toast.appendChild(iconContainer.firstElementChild as HTMLElement)
+    toast.appendChild(messageSpan)
 
     container.appendChild(toast)
 

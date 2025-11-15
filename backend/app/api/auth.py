@@ -2,7 +2,7 @@
 Authentication endpoints
 Handles user registration, login, and token refresh
 """
-from fastapi import APIRouter, Depends, status, Request
+from fastapi import APIRouter, Depends, status, Request, Response
 from sqlalchemy.orm import Session
 from app.database import get_db
 from app.models.user import User
@@ -24,9 +24,11 @@ from app.core.rate_limit import (
     limiter,
     RateLimitTier
 )
+from app.config import get_settings
 
 logger = get_logger(__name__)
 router = APIRouter()
+settings = get_settings()
 
 
 @router.post("/register", response_model=UserResponse, status_code=status.HTTP_201_CREATED)
@@ -78,16 +80,17 @@ async def register(request: Request, user_data: UserCreate, db: Session = Depend
 
 @router.post("/login", response_model=Token)
 @limiter.limit(RateLimitTier.AUTH_LOGIN)
-async def login(request: Request, login_data: UserLogin, db: Session = Depends(get_db)):
+async def login(request: Request, response: Response, login_data: UserLogin, db: Session = Depends(get_db)):
     """
-    Login and get access token
+    Login and get access token (stored in httpOnly cookies)
 
     Args:
         login_data: User login credentials
         db: Database session
+        response: FastAPI Response for setting cookies
 
     Returns:
-        Token: JWT tokens (access and refresh)
+        Token: JWT tokens (access and refresh) - also set as httpOnly cookies
 
     Raises:
         UnauthorizedException: If credentials are invalid
@@ -108,6 +111,31 @@ async def login(request: Request, login_data: UserLogin, db: Session = Depends(g
     access_token = create_access_token(token_data)
     refresh_token = create_refresh_token(token_data)
 
+    # Set httpOnly cookies for secure token storage
+    is_production = settings.ENVIRONMENT == 'production'
+
+    # Access token cookie (15 minutes)
+    response.set_cookie(
+        key="access_token",
+        value=access_token,
+        httponly=True,
+        secure=is_production,  # HTTPS only in production
+        samesite="lax",  # CSRF protection
+        max_age=15 * 60,  # 15 minutes in seconds
+        path="/"
+    )
+
+    # Refresh token cookie (7 days)
+    response.set_cookie(
+        key="refresh_token",
+        value=refresh_token,
+        httponly=True,
+        secure=is_production,  # HTTPS only in production
+        samesite="lax",  # CSRF protection
+        max_age=7 * 24 * 60 * 60,  # 7 days in seconds
+        path="/api/auth"  # Only send with auth endpoints
+    )
+
     logger.info(f"User logged in: {user.username} (ID: {user.id})")
 
     return {
@@ -119,12 +147,13 @@ async def login(request: Request, login_data: UserLogin, db: Session = Depends(g
 
 @router.post("/refresh", response_model=Token)
 @limiter.limit(RateLimitTier.AUTH_REFRESH)
-async def refresh_token(request: Request, refresh_token: str, db: Session = Depends(get_db)):
+async def refresh_token_endpoint(request: Request, response: Response, db: Session = Depends(get_db)):
     """
-    Refresh access token using refresh token
+    Refresh access token using refresh token from cookie
 
     Args:
-        refresh_token: JWT refresh token
+        request: Request object (to read cookies)
+        response: Response object (to set new cookies)
         db: Database session
 
     Returns:
@@ -133,6 +162,12 @@ async def refresh_token(request: Request, refresh_token: str, db: Session = Depe
     Raises:
         UnauthorizedException: If refresh token is invalid
     """
+    # Get refresh token from cookie
+    refresh_token = request.cookies.get("refresh_token")
+    if not refresh_token:
+        logger.warning("No refresh token in cookies")
+        raise UnauthorizedException(detail="No refresh token provided")
+
     # Decode refresh token
     payload = decode_token(refresh_token)
     if payload is None:
@@ -157,6 +192,31 @@ async def refresh_token(request: Request, refresh_token: str, db: Session = Depe
     new_access_token = create_access_token(token_data)
     new_refresh_token = create_refresh_token(token_data)
 
+    # Set new httpOnly cookies
+    is_production = settings.ENVIRONMENT == 'production'
+
+    # Access token cookie (15 minutes)
+    response.set_cookie(
+        key="access_token",
+        value=new_access_token,
+        httponly=True,
+        secure=is_production,
+        samesite="lax",
+        max_age=15 * 60,
+        path="/"
+    )
+
+    # Refresh token cookie (7 days)
+    response.set_cookie(
+        key="refresh_token",
+        value=new_refresh_token,
+        httponly=True,
+        secure=is_production,
+        samesite="lax",
+        max_age=7 * 24 * 60 * 60,
+        path="/api/auth"
+    )
+
     logger.info(f"Token refreshed for user: {user.username} (ID: {user.id})")
 
     return {
@@ -164,3 +224,25 @@ async def refresh_token(request: Request, refresh_token: str, db: Session = Depe
         "refresh_token": new_refresh_token,
         "token_type": "bearer"
     }
+
+
+@router.post("/logout")
+async def logout(response: Response):
+    """
+    Logout user by clearing httpOnly cookies
+
+    Args:
+        response: Response object to clear cookies
+
+    Returns:
+        dict: Success message
+    """
+    # Clear access token cookie
+    response.delete_cookie(key="access_token", path="/")
+
+    # Clear refresh token cookie
+    response.delete_cookie(key="refresh_token", path="/api/auth")
+
+    logger.info("User logged out")
+
+    return {"message": "Successfully logged out"}

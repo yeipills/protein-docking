@@ -3,7 +3,7 @@ FastAPI dependencies for dependency injection
 Handles authentication, authorization, and common dependencies
 """
 from typing import Optional
-from fastapi import Depends, Header
+from fastapi import Depends, Header, Request
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from sqlalchemy.orm import Session
 from app.database import get_db
@@ -13,18 +13,20 @@ from app.core.exceptions import UnauthorizedException, NotFoundException
 from app.core.logging import get_logger
 
 logger = get_logger(__name__)
-security = HTTPBearer()
+security = HTTPBearer(auto_error=False)  # Don't auto-error to allow cookie fallback
 
 
 async def get_current_user(
-    credentials: HTTPAuthorizationCredentials = Depends(security),
+    request: Request,
+    credentials: Optional[HTTPAuthorizationCredentials] = Depends(security),
     db: Session = Depends(get_db)
 ) -> User:
     """
-    Get current authenticated user from JWT token
+    Get current authenticated user from JWT token (from cookie or Authorization header)
 
     Args:
-        credentials: HTTP Bearer token
+        request: Request object (to read cookies)
+        credentials: HTTP Bearer token (optional, from Authorization header)
         db: Database session
 
     Returns:
@@ -33,7 +35,19 @@ async def get_current_user(
     Raises:
         UnauthorizedException: If token is invalid or user not found
     """
-    token = credentials.credentials
+    # Try to get token from Authorization header first
+    token = None
+    if credentials:
+        token = credentials.credentials
+
+    # If no token in header, try to get from cookie
+    if not token:
+        token = request.cookies.get("access_token")
+
+    # If still no token, raise unauthorized
+    if not token:
+        logger.warning("No authentication token provided")
+        raise UnauthorizedException(detail="Not authenticated")
 
     # Decode token
     payload = decode_token(token)
