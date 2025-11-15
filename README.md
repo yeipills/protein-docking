@@ -670,6 +670,7 @@ docker-compose exec redis redis-cli ping
 ### Core Documentation
 - **[README.md](README.md)** - This file, project overview and quick start
 - **[DEPLOYMENT.md](DEPLOYMENT.md)** - Production deployment guide with security checklist
+- **[TESTING.md](TESTING.md)** - Comprehensive testing guide (pytest, Vitest, Playwright)
 - **[WEBSOCKET.md](WEBSOCKET.md)** - WebSocket protocol and real-time communication guide
 - **[PERFORMANCE_IMPROVEMENTS.md](PERFORMANCE_IMPROVEMENTS.md)** - v2.3.0 performance optimizations (Cython + Parallelization)
 - **[OPTIMIZATION_SUMMARY.md](OPTIMIZATION_SUMMARY.md)** - v2.2.0 optimizations summary
