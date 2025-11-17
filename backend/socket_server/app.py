@@ -6,6 +6,7 @@ from flask import Flask
 from flask_socketio import SocketIO, emit, join_room, leave_room
 from flask_cors import CORS
 import os
+from datetime import datetime
 from app.config import get_settings
 from app.core.security import decode_token
 from app.core.logging import setup_logging, get_logger
@@ -209,6 +210,5 @@ if __name__ == '__main__':
         app,
         host=settings.SOCKET_HOST,
         port=settings.SOCKET_PORT,
-        debug=settings.ENVIRONMENT == 'development',
-        allow_unsafe_werkzeug=True
+        debug=settings.ENVIRONMENT == 'development'
     )

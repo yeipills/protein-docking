@@ -1,3 +1,4 @@
+import { memo, useCallback, useMemo } from 'react'
 import { Job, JobStatus } from '@/types'
 import { Card, CardContent, CardHeader, CardTitle } from './ui/Card'
 import { Badge } from './ui/Badge'
@@ -11,10 +12,8 @@ interface JobCardProps {
   job: Job
 }
 
-export function JobCard({ job }: JobCardProps) {
-  const cancelJob = useCancelJob()
-
-  const getStatusBadge = (status: JobStatus) => {
+// Memoize helper functions outside component to avoid recreation
+const getStatusBadge = (status: JobStatus) => {
     switch (status) {
       case JobStatus.PENDING:
         return <Badge variant="warning">Pendiente</Badge>
@@ -27,9 +26,9 @@ export function JobCard({ job }: JobCardProps) {
       case JobStatus.CANCELLED:
         return <Badge variant="default">Cancelado</Badge>
     }
-  }
+}
 
-  const getStatusIcon = (status: JobStatus) => {
+const getStatusIcon = (status: JobStatus) => {
     switch (status) {
       case JobStatus.COMPLETED:
         return <CheckCircle2 className="h-5 w-5 text-green-600" />
@@ -40,9 +39,21 @@ export function JobCard({ job }: JobCardProps) {
       default:
         return <Clock className="h-5 w-5 text-gray-400" />
     }
-  }
+}
 
-  const canCancel = job.status === JobStatus.PENDING || job.status === JobStatus.PROCESSING
+function JobCardComponent({ job }: JobCardProps) {
+  const cancelJob = useCancelJob()
+
+  // Memoize expensive computations
+  const canCancel = useMemo(
+    () => job.status === JobStatus.PENDING || job.status === JobStatus.PROCESSING,
+    [job.status]
+  )
+
+  // Memoize callback to prevent unnecessary re-renders
+  const handleCancel = useCallback(() => {
+    cancelJob.mutate(job.id)
+  }, [cancelJob, job.id])
 
   return (
     <Card className="hover:shadow-md transition-shadow">
@@ -108,7 +119,7 @@ export function JobCard({ job }: JobCardProps) {
             <Button
               variant="danger"
               size="sm"
-              onClick={() => cancelJob.mutate(job.id)}
+              onClick={handleCancel}
               isLoading={cancelJob.isPending}
             >
               Cancelar Job
@@ -138,3 +149,15 @@ export function JobCard({ job }: JobCardProps) {
     </Card>
   )
 }
+
+// Export memoized component to prevent unnecessary re-renders
+// Only re-renders when job prop changes
+export const JobCard = memo(JobCardComponent, (prevProps, nextProps) => {
+  // Custom comparison: only re-render if job has actually changed
+  return (
+    prevProps.job.id === nextProps.job.id &&
+    prevProps.job.status === nextProps.job.status &&
+    prevProps.job.progress === nextProps.job.progress &&
+    prevProps.job.error_message === nextProps.job.error_message
+  )
+})
