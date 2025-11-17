@@ -29,6 +29,36 @@ Inicia el entorno de desarrollo completo con hot-reload.
 
 ---
 
+### ⏹️ dev-stop.sh
+Detiene el entorno de desarrollo de forma controlada.
+
+**Uso:**
+```bash
+# Detener servicios (preserva datos)
+./scripts/dev-stop.sh
+
+# Detener y limpiar volúmenes (elimina datos)
+./scripts/dev-stop.sh --clean
+```
+
+**Características:**
+- Detiene servicios gracefully
+- Muestra estado de contenedores antes de detener
+- Opción para limpiar volúmenes
+- Confirmación requerida para limpieza de datos
+- Preserva volúmenes por defecto para no perder datos
+
+**Volúmenes preservados:**
+- `postgres_dev_data` - Base de datos
+- `uploads_dev` - Archivos subidos
+- `results_dev` - Resultados de docking
+- `logs_dev` - Logs de aplicación
+
+**⚠️ ADVERTENCIA:**
+El flag `--clean` eliminará TODOS los datos (base de datos, archivos subidos, resultados). Úsalo solo si estás seguro.
+
+---
+
 ### 💾 backup-db.sh
 Crea backups comprimidos de la base de datos PostgreSQL (versión básica Docker).
 
@@ -248,6 +278,9 @@ Ejecuta suite completa de tests para backend y frontend.
 
 # 3. Crear backup antes de cambios mayores
 ./scripts/backup-db.sh
+
+# 4. Detener entorno cuando termines
+./scripts/dev-stop.sh
 ```
 
 ### Pre-Deployment

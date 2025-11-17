@@ -13,6 +13,7 @@ help:
 	@echo ""
 	@echo "Development:"
 	@echo "  make dev              Start development environment (all services)"
+	@echo "  make dev-stop         Stop development environment"
 	@echo "  make dev-backend      Start only backend services"
 	@echo "  make dev-frontend     Start only frontend dev server"
 	@echo ""
@@ -76,6 +77,10 @@ setup: install
 dev:
 	@echo "🚀 Starting development environment..."
 	./scripts/dev-start.sh
+
+dev-stop:
+	@echo "⏹️  Stopping development environment..."
+	./scripts/dev-stop.sh
 
 dev-backend:
 	@echo "🐍 Starting backend services..."
