@@ -184,3 +184,24 @@ async def startup():
         "service": "protein-docking-api",
         "checks": checks,
     }
+
+
+@router.get("/cache")
+async def cache_stats():
+    """
+    Cache statistics endpoint - provides detailed Redis cache metrics.
+
+    Returns cache usage, hit rate, and other relevant metrics.
+    Useful for monitoring and debugging caching behavior.
+
+    Returns:
+        dict: Cache statistics
+    """
+    from app.core.cache import get_cache_stats
+
+    stats = get_cache_stats()
+
+    return {
+        "service": "protein-docking-api",
+        "cache": stats
+    }

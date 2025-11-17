@@ -110,6 +110,70 @@ file_upload_size_bytes = Histogram(
 )
 
 # ==========================================
+# CACHE METRICS
+# ==========================================
+
+cache_operations = Counter(
+    'cache_operations_total',
+    'Total cache operations',
+    ['operation']  # hit, miss, set, error, invalidate
+)
+
+cache_keys_total = Gauge(
+    'cache_keys_total',
+    'Total number of keys in cache'
+)
+
+cache_memory_bytes = Gauge(
+    'cache_memory_bytes',
+    'Memory used by cache in bytes'
+)
+
+# ==========================================
+# FILE VALIDATION METRICS
+# ==========================================
+
+file_validation_total = Counter(
+    'file_validation_total',
+    'Total file validations performed',
+    ['file_type', 'status']  # status: success, failed
+)
+
+file_validation_failures = Counter(
+    'file_validation_failures_total',
+    'Total file validation failures',
+    ['file_type', 'reason']  # reason: size, extension, content, mime, etc.
+)
+
+file_validation_duration_seconds = Histogram(
+    'file_validation_duration_seconds',
+    'Time spent validating files',
+    ['file_type'],
+    buckets=(0.001, 0.005, 0.01, 0.05, 0.1, 0.5, 1.0, 2.0, 5.0)
+)
+
+# ==========================================
+# AUDIT LOGGING METRICS
+# ==========================================
+
+audit_events_total = Counter(
+    'audit_events_total',
+    'Total audit events logged',
+    ['action', 'status']  # action: login, upload, etc. status: success, failure
+)
+
+audit_events_by_severity = Counter(
+    'audit_events_by_severity_total',
+    'Audit events by severity level',
+    ['severity']  # info, warning, error, critical
+)
+
+audit_log_size = Gauge(
+    'audit_log_total_entries',
+    'Total number of audit log entries in database'
+)
+
+# ==========================================
 # APPLICATION INFO
 # ==========================================
 

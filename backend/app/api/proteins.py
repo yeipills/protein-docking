@@ -123,7 +123,14 @@ async def upload_part_two(
     db: Session = Depends(get_db)
 ):
     """
-    Upload CR files (Part Two) and start layer processing
+    Upload CR files (Part Two) and start layer processing.
+
+    Performs validation on context rays files including:
+    - File extension and size checks
+    - Text file encoding validation
+    - Security checks
+
+    Generates layer files for Unity visualization.
     """
     # Comprehensive file validation
     await validate_file_upload(cr_totals_file, '.txt')

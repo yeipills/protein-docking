@@ -80,6 +80,19 @@ async def register(request: Request, user_data: UserCreate, db: Session = Depend
     db.commit()
     db.refresh(new_user)
 
+    # Audit log
+    log_from_request(
+        db=db,
+        request=request,
+        action=AuditAction.USER_CREATE,
+        user_id=new_user.id,
+        username=new_user.username,
+        resource_type="user",
+        resource_id=str(new_user.id),
+        description=f"User registered: {new_user.username}",
+        metadata={"email": new_user.email, "full_name": new_user.full_name}
+    )
+
     logger.info(f"New user registered: {new_user.username} (ID: {new_user.id})")
     return new_user
 
@@ -165,6 +178,20 @@ async def login(request: Request, response: Response, login_data: UserLogin, db:
 
     if not user.is_active:
         logger.warning(f"Login attempt by inactive user: {login_data.username}")
+
+        # Audit log inactive user login attempt
+        log_from_request(
+            db=db,
+            request=request,
+            action=AuditAction.LOGIN_FAILURE,
+            user_id=user.id,
+            username=user.username,
+            severity=AuditSeverity.WARNING,
+            status="failure",
+            description=f"Login attempt by inactive user {user.username}",
+            error_message="User account is inactive"
+        )
+
         raise UnauthorizedException(detail="User account is inactive")
 
     # Successful login - reset failed attempts
