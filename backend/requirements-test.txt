@@ -1,0 +1,22 @@
+# Testing Dependencies for Protein Docking Platform Backend
+# Install with: pip install -r requirements-test.txt
+
+# Testing Framework
+pytest==8.3.3
+pytest-asyncio==0.24.0
+pytest-cov==6.0.0
+pytest-mock==3.14.0
+pytest-env==1.1.5
+pytest-xdist==3.6.1  # Parallel testing
+
+# HTTP Testing
+httpx==0.28.0  # Already in main requirements but needed for testing
+
+# Test Data Generation
+faker==30.8.2
+
+# Coverage Tools
+coverage[toml]==7.6.9
+
+# Load Testing (optional)
+locust==2.32.3
