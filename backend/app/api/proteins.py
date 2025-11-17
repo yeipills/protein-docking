@@ -22,6 +22,7 @@ from app.core.exceptions import (
 from app.core.logging import get_logger
 from app.config import get_settings
 from app.tasks.protein_tasks import process_part_one, process_part_two
+from app.core.file_validation import validate_file_upload, sanitize_filename
 
 logger = get_logger(__name__)
 router = APIRouter()
@@ -39,63 +40,78 @@ async def upload_part_one(
 ):
     """
     Upload protein files (Part One) and start processing
-    Generates centroidsand context rays
+    Generates centroids and context rays
     """
-    # Validate file extensions
-    allowed_extensions = ['.stl', '.vert', '.face']
-    files = [stl_file, vertices_file, faces_file]
+    # Comprehensive file validation
+    await validate_file_upload(stl_file, '.stl')
+    await validate_file_upload(vertices_file, '.vert')
+    await validate_file_upload(faces_file, '.face')
 
-    for file in files:
-        ext = Path(file.filename).suffix.lower()
-        if ext not in allowed_extensions:
-            raise ValidationException(f"Invalid file extension: {ext}")
+    # Sanitize protein name to prevent path traversal
+    protein_name = sanitize_filename(protein_name)
 
-    # Create protein record
-    protein = Protein(
-        user_id=current_user.id,
-        name=protein_name
-    )
-    db.add(protein)
-    db.commit()
-    db.refresh(protein)
+    try:
+        # Create protein record
+        protein = Protein(
+            user_id=current_user.id,
+            name=protein_name
+        )
+        db.add(protein)
+        db.commit()
+        db.refresh(protein)
 
-    # Create upload directory
-    upload_dir = Path(settings.UPLOAD_DIR) / str(current_user.id) / str(protein.id)
-    upload_dir.mkdir(parents=True, exist_ok=True)
+        # Create upload directory
+        upload_dir = Path(settings.UPLOAD_DIR) / str(current_user.id) / str(protein.id)
+        upload_dir.mkdir(parents=True, exist_ok=True)
 
-    # Save files
-    file_paths = {}
-    for file, file_type in [(stl_file, 'stl'), (vertices_file, 'vert'), (faces_file, 'face')]:
-        file_path = upload_dir / f"{protein_name}.{file_type}"
-        async with aiofiles.open(file_path, 'wb') as f:
-            content = await file.read()
-            await f.write(content)
-        file_paths[file_type] = str(file_path)
+        # Save files
+        file_paths = {}
+        for file, file_type in [(stl_file, 'stl'), (vertices_file, 'vert'), (faces_file, 'face')]:
+            file_path = upload_dir / f"{protein_name}.{file_type}"
+            async with aiofiles.open(file_path, 'wb') as f:
+                content = await file.read()
+                await f.write(content)
+            file_paths[file_type] = str(file_path)
 
-    # Update protein with file paths
-    protein.stl_file = file_paths['stl']
-    protein.vertices_file = file_paths['vert']
-    protein.faces_file = file_paths['face']
+        # Update protein with file paths
+        protein.stl_file = file_paths['stl']
+        protein.vertices_file = file_paths['vert']
+        protein.faces_file = file_paths['face']
 
-    # Create job
-    job = Job(
-        user_id=current_user.id,
-        protein_id=protein.id,
-        job_type=JobType.PART_ONE,
-        status=JobStatus.PENDING,
-        input_files=list(file_paths.values())
-    )
-    db.add(job)
-    db.commit()
-    db.refresh(job)
+        # Create job
+        job = Job(
+            user_id=current_user.id,
+            protein_id=protein.id,
+            job_type=JobType.PART_ONE,
+            status=JobStatus.PENDING,
+            input_files=list(file_paths.values())
+        )
+        db.add(job)
+        db.commit()
+        db.refresh(job)
 
-    # Start Celery task
-    task = process_part_one.delay(job.id)
-    job.celery_task_id = task.id
-    db.commit()
+        # Start Celery task
+        task = process_part_one.delay(job.id)
+        job.celery_task_id = task.id
+        db.commit()
 
-    logger.info(f"Part One job created: {job.id} for protein {protein_name}")
-    return job
+        logger.info(f"Part One job created: {job.id} for protein {protein_name}")
+        return job
+
+    except Exception as e:
+        # Rollback database changes
+        db.rollback()
+
+        # Clean up uploaded files if they exist
+        try:
+            if 'upload_dir' in locals() and upload_dir.exists():
+                import shutil
+                shutil.rmtree(upload_dir)
+        except Exception as cleanup_error:
+            logger.error(f"Error during cleanup: {cleanup_error}")
+
+        logger.error(f"Error during Part One upload: {e}")
+        raise
 
 
 @router.post("/upload/part-two", response_model=JobResponse, status_code=status.HTTP_201_CREATED)
@@ -107,8 +123,19 @@ async def upload_part_two(
     db: Session = Depends(get_db)
 ):
     """
-    Upload CR files (Part Two) and start layer processing
+    Upload CR files (Part Two) and start layer processing.
+
+    Performs validation on context rays files including:
+    - File extension and size checks
+    - Text file encoding validation
+    - Security checks
+
+    Generates layer files for Unity visualization.
     """
+    # Comprehensive file validation
+    await validate_file_upload(cr_totals_file, '.txt')
+    await validate_file_upload(context_rays_file, '.txt')
+
     # Get protein
     protein = db.query(Protein).filter(Protein.id == protein_id).first()
     if not protein:
@@ -117,42 +144,62 @@ async def upload_part_two(
     if protein.user_id != current_user.id:
         raise ForbiddenException("Not authorized to access this protein")
 
-    # Create directory
-    upload_dir = Path(settings.UPLOAD_DIR) / str(current_user.id) / str(protein.id)
-    upload_dir.mkdir(parents=True, exist_ok=True)
+    try:
+        # Create directory
+        upload_dir = Path(settings.UPLOAD_DIR) / str(current_user.id) / str(protein.id)
+        upload_dir.mkdir(parents=True, exist_ok=True)
 
-    # Save files
-    file_paths = {}
-    for file, file_type in [(cr_totals_file, 'cr_totals'), (context_rays_file, 'context_rays')]:
-        file_path = upload_dir / f"{protein.name}_{file_type}.txt"
-        async with aiofiles.open(file_path, 'wb') as f:
-            content = await file.read()
-            await f.write(content)
-        file_paths[file_type] = str(file_path)
+        # Save files
+        file_paths = {}
+        for file, file_type in [(cr_totals_file, 'cr_totals'), (context_rays_file, 'context_rays')]:
+            # Sanitize filename
+            safe_protein_name = sanitize_filename(protein.name)
+            file_path = upload_dir / f"{safe_protein_name}_{file_type}.txt"
+            async with aiofiles.open(file_path, 'wb') as f:
+                content = await file.read()
+                await f.write(content)
+            file_paths[file_type] = str(file_path)
 
-    # Update protein
-    protein.cr_totals_file = file_paths['cr_totals']
-    protein.context_rays_file = file_paths['context_rays']
+        # Update protein
+        protein.cr_totals_file = file_paths['cr_totals']
+        protein.context_rays_file = file_paths['context_rays']
 
-    # Create job
-    job = Job(
-        user_id=current_user.id,
-        protein_id=protein.id,
-        job_type=JobType.PART_TWO,
-        status=JobStatus.PENDING,
-        input_files=list(file_paths.values())
-    )
-    db.add(job)
-    db.commit()
-    db.refresh(job)
+        # Create job
+        job = Job(
+            user_id=current_user.id,
+            protein_id=protein.id,
+            job_type=JobType.PART_TWO,
+            status=JobStatus.PENDING,
+            input_files=list(file_paths.values())
+        )
+        db.add(job)
+        db.commit()
+        db.refresh(job)
 
-    # Start Celery task
-    task = process_part_two.delay(job.id)
-    job.celery_task_id = task.id
-    db.commit()
+        # Start Celery task
+        task = process_part_two.delay(job.id)
+        job.celery_task_id = task.id
+        db.commit()
 
-    logger.info(f"Part Two job created: {job.id} for protein {protein.name}")
-    return job
+        logger.info(f"Part Two job created: {job.id} for protein {protein.name}")
+        return job
+
+    except Exception as e:
+        # Rollback database changes
+        db.rollback()
+
+        # Clean up uploaded files if they exist
+        try:
+            if 'file_paths' in locals():
+                import shutil
+                for file_path in file_paths.values():
+                    if os.path.exists(file_path):
+                        os.remove(file_path)
+        except Exception as cleanup_error:
+            logger.error(f"Error during cleanup: {cleanup_error}")
+
+        logger.error(f"Error during Part Two upload: {e}")
+        raise
 
 
 @router.get("/", response_model=ProteinListResponse)

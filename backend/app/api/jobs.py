@@ -11,6 +11,7 @@ from app.schemas.job import JobResponse, JobListResponse
 from app.dependencies import get_current_user
 from app.core.exceptions import NotFoundException, ForbiddenException
 from app.core.logging import get_logger
+from app.core.cache import cache, invalidate_pattern, CacheTTL
 
 logger = get_logger(__name__)
 router = APIRouter()

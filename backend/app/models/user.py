@@ -22,6 +22,11 @@ class User(Base):
     jobs_count = Column(Integer, default=0)
     last_job_at = Column(DateTime(timezone=True), nullable=True)
 
+    # Account lockout fields
+    failed_login_attempts = Column(Integer, default=0)
+    last_failed_login = Column(DateTime(timezone=True), nullable=True)
+    locked_until = Column(DateTime(timezone=True), nullable=True)
+
     # Timestamps
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())

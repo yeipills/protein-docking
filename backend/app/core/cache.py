@@ -7,9 +7,11 @@ import json
 from functools import wraps
 from typing import Any, Callable, Optional
 import hashlib
+from datetime import datetime
 
 from app.config import get_settings
 from app.core.logging import get_logger
+from app.core.metrics import cache_operations
 
 settings = get_settings()
 logger = get_logger(__name__)
@@ -32,6 +34,44 @@ except Exception as e:
     redis_client = None
 
 
+def _serialize_value(value: Any) -> str:
+    """
+    Serialize a value for caching, handling SQLAlchemy models.
+
+    Args:
+        value: Value to serialize
+
+    Returns:
+        str: JSON serialized value
+    """
+    def default_serializer(obj):
+        """Custom serializer for non-JSON types"""
+        # Handle datetime objects
+        if isinstance(obj, datetime):
+            return obj.isoformat()
+
+        # Handle SQLAlchemy models (check for __dict__)
+        if hasattr(obj, '__dict__') and hasattr(obj, '__table__'):
+            # Convert SQLAlchemy model to dict
+            result = {}
+            for column in obj.__table__.columns:
+                value = getattr(obj, column.name)
+                if isinstance(value, datetime):
+                    result[column.name] = value.isoformat()
+                else:
+                    result[column.name] = value
+            return result
+
+        # Handle lists of SQLAlchemy models
+        if isinstance(obj, list) and obj and hasattr(obj[0], '__table__'):
+            return [default_serializer(item) for item in obj]
+
+        # Default: convert to string
+        return str(obj)
+
+    return json.dumps(value, default=default_serializer)
+
+
 def _generate_cache_key(prefix: str, *args, **kwargs) -> str:
     """
     Generate a unique cache key from function arguments.
@@ -44,13 +84,47 @@ def _generate_cache_key(prefix: str, *args, **kwargs) -> str:
     Returns:
         str: Unique cache key
     """
+    # Filter out SQLAlchemy sessions and non-serializable objects
+    serializable_args = []
+    for arg in args:
+        if not hasattr(arg, '__table__'):  # Skip SQLAlchemy sessions
+            serializable_args.append(str(arg))
+
+    serializable_kwargs = {
+        k: str(v) for k, v in kwargs.items()
+        if not hasattr(v, '__table__')
+    }
+
     # Create a string representation of args and kwargs
-    key_data = f"{str(args)}:{str(sorted(kwargs.items()))}"
+    key_data = f"{str(serializable_args)}:{str(sorted(serializable_kwargs.items()))}"
 
     # Hash the data to create a shorter key
     key_hash = hashlib.md5(key_data.encode()).hexdigest()
 
     return f"{prefix}:{key_hash}"
+
+
+def _calculate_hit_rate() -> float:
+    """
+    Calculate cache hit rate from Prometheus metrics.
+
+    Returns:
+        float: Hit rate as a percentage (0-100)
+    """
+    try:
+        from app.core.metrics import cache_operations
+
+        # Get the metric values
+        hits = cache_operations.labels(operation="hit")._value.get()
+        misses = cache_operations.labels(operation="miss")._value.get()
+
+        total = hits + misses
+        if total == 0:
+            return 0.0
+
+        return round((hits / total) * 100, 2)
+    except Exception:
+        return 0.0
 
 
 def cache(ttl: int = 300, prefix: Optional[str] = None):
@@ -92,12 +166,15 @@ def cache(ttl: int = 300, prefix: Optional[str] = None):
 
                 if cached_value is not None:
                     logger.debug(f"Cache HIT: {cache_key}")
+                    cache_operations.labels(operation="hit").inc()
                     return json.loads(cached_value)
 
                 logger.debug(f"Cache MISS: {cache_key}")
+                cache_operations.labels(operation="miss").inc()
 
             except Exception as e:
                 logger.warning(f"Cache read error: {e}")
+                cache_operations.labels(operation="error").inc()
 
             # Execute function
             result = await func(*args, **kwargs)
@@ -105,11 +182,13 @@ def cache(ttl: int = 300, prefix: Optional[str] = None):
             # Store in cache
             try:
                 # Serialize result
-                serialized = json.dumps(result, default=str)
+                serialized = _serialize_value(result)
                 redis_client.setex(cache_key, ttl, serialized)
+                cache_operations.labels(operation="set").inc()
                 logger.debug(f"Cache SET: {cache_key} (TTL: {ttl}s)")
             except Exception as e:
                 logger.warning(f"Cache write error: {e}")
+                cache_operations.labels(operation="error").inc()
 
             return result
 
@@ -128,12 +207,15 @@ def cache(ttl: int = 300, prefix: Optional[str] = None):
 
                 if cached_value is not None:
                     logger.debug(f"Cache HIT: {cache_key}")
+                    cache_operations.labels(operation="hit").inc()
                     return json.loads(cached_value)
 
                 logger.debug(f"Cache MISS: {cache_key}")
+                cache_operations.labels(operation="miss").inc()
 
             except Exception as e:
                 logger.warning(f"Cache read error: {e}")
+                cache_operations.labels(operation="error").inc()
 
             # Execute function
             result = func(*args, **kwargs)
@@ -141,11 +223,13 @@ def cache(ttl: int = 300, prefix: Optional[str] = None):
             # Store in cache
             try:
                 # Serialize result
-                serialized = json.dumps(result, default=str)
+                serialized = _serialize_value(result)
                 redis_client.setex(cache_key, ttl, serialized)
+                cache_operations.labels(operation="set").inc()
                 logger.debug(f"Cache SET: {cache_key} (TTL: {ttl}s)")
             except Exception as e:
                 logger.warning(f"Cache write error: {e}")
+                cache_operations.labels(operation="error").inc()
 
             return result
 
@@ -180,9 +264,11 @@ def invalidate_cache(prefix: str, *args, **kwargs) -> bool:
         deleted = redis_client.delete(cache_key)
         if deleted:
             logger.debug(f"Cache INVALIDATED: {cache_key}")
+            cache_operations.labels(operation="invalidate").inc()
         return bool(deleted)
     except Exception as e:
         logger.warning(f"Cache invalidation error: {e}")
+        cache_operations.labels(operation="error").inc()
         return False
 
 
@@ -211,16 +297,18 @@ def invalidate_pattern(pattern: str) -> int:
         if keys:
             deleted = redis_client.delete(*keys)
             logger.info(f"Cache PATTERN INVALIDATED: {pattern} ({deleted} keys)")
+            cache_operations.labels(operation="invalidate").inc(deleted)
             return deleted
         return 0
     except Exception as e:
         logger.warning(f"Cache pattern invalidation error: {e}")
+        cache_operations.labels(operation="error").inc()
         return 0
 
 
 def get_cache_stats() -> dict:
     """
-    Get Redis cache statistics.
+    Get Redis cache statistics and update Prometheus metrics.
 
     Returns:
         dict: Cache statistics including memory usage, keys count, etc.
@@ -229,13 +317,24 @@ def get_cache_stats() -> dict:
         return {"status": "unavailable"}
 
     try:
+        from app.core.metrics import cache_keys_total, cache_memory_bytes
+
         info = redis_client.info()
+        keys_count = redis_client.dbsize()
+        memory_used = info.get("used_memory", 0)
+
+        # Update Prometheus metrics
+        cache_keys_total.set(keys_count)
+        cache_memory_bytes.set(memory_used)
+
         return {
             "status": "available",
             "used_memory": info.get("used_memory_human"),
-            "total_keys": redis_client.dbsize(),
+            "used_memory_bytes": memory_used,
+            "total_keys": keys_count,
             "connected_clients": info.get("connected_clients"),
             "uptime_days": info.get("uptime_in_days"),
+            "hit_rate": _calculate_hit_rate(),
         }
     except Exception as e:
         logger.error(f"Error getting cache stats: {e}")
