@@ -34,7 +34,7 @@ The platform architecture (v2.0) is complete with:
 #### 1. Script01 - Surface Reader (Priority: HIGH)
 **Location**: `backend/app/algorithms/surface_reader.py`
 
-**Source**: `Backend/C-lculos-Previos-main/Centroides de triangulos/Programa_python/Script01_lectura_caras_vertices.py`
+**Source**: Original legacy code (removed from repo - v1.0.0). Current implementation in `backend/app/algorithms/surface_reader.py`
 
 **Task**: Migrate MSMS file reading logic
 
@@ -58,7 +58,7 @@ def read_surface_files(vertices_file: str, faces_file: str):
 #### 2. Script02 - Centroid Calculator (Priority: HIGH)
 **Location**: `backend/app/algorithms/centroid_calculator.py`
 
-**Source**: `Backend/C-lculos-Previos-main/.../Script02_calculo_centroides.py`
+**Source**: Original legacy code (removed from repo - v1.0.0). Current implementation in `backend/app/algorithms/centroid_calculator.py`
 
 **Task**: Calculate triangle centroids from faces
 
@@ -86,8 +86,9 @@ def calculate_centroids(vertices, faces):
 **Location**: `backend/app/algorithms/context_rays.py`
 
 **Source**:
-- `Backend/.../Script03_rayos_contexto.py` (Python)
-- `Backend/.../Script03.pyx` (Cython optimization - NOT FOUND, may need to be created)
+- Original legacy code (removed from repo - v1.0.0)
+- Current implementation: `backend/app/algorithms/context_rays.py` (Python)
+- Cython optimization: `backend/app/algorithms/context_rays.pyx` (implemented in v2.3.0)
 
 **Task**: Calculate context rays using spherical sampling
 
@@ -130,8 +131,9 @@ def calculate_context_rays(protein_name, vertices, faces, centroids, output_dir)
 **Location**: `backend/app/algorithms/layer_evaluator.py`
 
 **Source**:
-- `Backend/.../Script04_evaluacion_capas.py` (Python)
-- `Backend/.../Script04.pyx` (Cython optimizations)
+- Original legacy code (removed from repo - v1.0.0)
+- Current implementation: `backend/app/algorithms/layer_evaluator.py` (Python)
+- Cython optimization: `backend/app/algorithms/layer_evaluator.pyx` (parallelized in v2.3.0)
 
 **Task**: Evaluate 9 context shape layers
 
@@ -181,7 +183,7 @@ def evaluate_layers(cr_totals_file, context_rays_file, output_dir):
 #### 5. Script05 - Unity Exporter (Priority: MEDIUM)
 **Location**: `backend/app/algorithms/unity_exporter.py`
 
-**Source**: `Backend/.../Script05_preparacion_capas_unity.py`
+**Source**: Original legacy code (removed from repo - v1.0.0). Current implementation in `backend/app/algorithms/unity_exporter.py`
 
 **Task**: Format layer data for Unity visualization
 
@@ -375,13 +377,14 @@ backend/app/algorithms/
 
 ## 🔗 Useful References
 
-### Original Files:
-- `Backend/C-lculos-Previos-main/Centroides de triangulos/Programa_python/Script01_lectura_caras_vertices.py`
-- `Backend/.../Script02_calculo_centroides.py`
-- `Backend/.../Script03_rayos_contexto.py`
-- `Backend/.../Script04_evaluacion_capas.py`
-- `Backend/.../Script04.pyx` (Cython)
-- `Backend/.../Script05_preparacion_capas_unity.py`
+### Original Files (Legacy - Removed in Project Cleanup):
+- Original scientific scripts from v1.0.0 have been archived
+- Current implementations are in `backend/app/algorithms/`:
+  - `surface_reader.py` (formerly Script01)
+  - `centroid_calculator.py` (formerly Script02)
+  - `context_rays.py` / `context_rays.pyx` (formerly Script03)
+  - `layer_evaluator.py` / `layer_evaluator.pyx` (formerly Script04)
+  - `unity_exporter.py` (formerly Script05)
 
 ### Libraries Used:
 - `numpy` - Array operations
@@ -410,7 +413,7 @@ A: No. You can migrate incrementally:
 A: Start with Python implementations. They will work but be slow. Learn Cython later for optimization. The platform will function with pure Python.
 
 **Q: How do I test algorithms?**
-A: Use sample protein files from `Backend/.../proteinas/` directory. Start with small proteins for faster iteration.
+A: Upload sample protein files through the web interface or API. Start with small proteins for faster iteration. Test data can be found in scientific publications or protein databases like PDB.
 
 **Q: Can I get help?**
 A: Yes! Each script has detailed comments in the original source files. You can also refer to the inline documentation and code examples.

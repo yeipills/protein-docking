@@ -147,9 +147,6 @@ protein-docking/
 │   ├── ci.yml                     # Comprehensive CI pipeline
 │   └── deploy.yml                 # Automated deployment
 │
-├── Backend/                       # Legacy code (kept for reference)
-│   └── C-lculos-Previos-main/    # Original Python scripts
-│
 ├── docker-compose.yml             # Production orchestration (7 services)
 ├── docker-compose.dev.yml         # Development with hot-reload
 ├── .env.example                   # Environment variable template
