@@ -156,6 +156,7 @@ Abre tu navegador en:
 
 - **Frontend**: http://localhost:3000
 - **Backend API Docs**: http://localhost:5000/docs
+- **Socket Server**: http://localhost:8080 (WebSocket real-time updates)
 - **Nginx (Producción)**: http://localhost
 
 **Credenciales de prueba**:

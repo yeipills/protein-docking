@@ -1,1 +1,0 @@
-#En blender debe usarse el add-on de fbx para unity, así automáticamente rota el eje x para que concuerde los los ejes de unity
