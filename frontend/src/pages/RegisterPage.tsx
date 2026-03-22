@@ -31,8 +31,18 @@ export function RegisterPage() {
 
     if (!password) {
       newErrors.password = 'La contraseña es requerida'
-    } else if (password.length < 8) {
-      newErrors.password = 'Mínimo 8 caracteres'
+    } else if (password.length < 12) {
+      newErrors.password = 'Mínimo 12 caracteres'
+    } else if (password.length > 72) {
+      newErrors.password = 'Máximo 72 caracteres'
+    } else if (!/[A-Z]/.test(password)) {
+      newErrors.password = 'Debe contener al menos una mayúscula'
+    } else if (!/[a-z]/.test(password)) {
+      newErrors.password = 'Debe contener al menos una minúscula'
+    } else if (!/\d/.test(password)) {
+      newErrors.password = 'Debe contener al menos un número'
+    } else if (!/[!@#$%^&*(),.?":{}|<>]/.test(password)) {
+      newErrors.password = 'Debe contener al menos un carácter especial (!@#$%^&*)'
     }
 
     if (password !== confirmPassword) {
@@ -91,7 +101,7 @@ export function RegisterPage() {
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 error={errors.password}
-                helperText="Mínimo 8 caracteres"
+                helperText="12-72 caracteres, con mayúscula, minúscula, número y carácter especial"
                 autoComplete="new-password"
                 disabled={register.isPending}
               />
