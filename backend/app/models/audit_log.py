@@ -100,7 +100,7 @@ class AuditLog(Base):
 
     # Details
     description = Column(Text, nullable=True)  # Human-readable description
-    metadata = Column(JSON, nullable=True)  # Additional structured data
+    extra_metadata = Column(JSON, nullable=True)  # Additional structured data
 
     # Changes (for update operations)
     changes = Column(JSON, nullable=True)  # Before/after values
@@ -139,7 +139,7 @@ class AuditLog(Base):
             "user_agent": self.user_agent,
             "request_id": self.request_id,
             "description": self.description,
-            "metadata": self.metadata,
+            "extra_metadata": self.extra_metadata,
             "changes": self.changes,
             "error_message": self.error_message,
             "error_code": self.error_code,

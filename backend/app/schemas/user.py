@@ -20,12 +20,13 @@ class UserCreate(UserBase):
 
     Password requirements:
     - Minimum 12 characters
+    - Maximum 72 characters (bcrypt limit)
     - At least one uppercase letter
     - At least one lowercase letter
     - At least one digit
     - At least one special character (!@#$%^&*(),.?\":{}|<>)
     """
-    password: str = Field(..., min_length=12, max_length=100)
+    password: str = Field(..., min_length=12, max_length=72)
 
     @field_validator('password')
     @classmethod
@@ -73,7 +74,7 @@ class UserUpdate(BaseModel):
     """Schema for updating user information"""
     email: Optional[EmailStr] = None
     full_name: Optional[str] = None
-    password: Optional[str] = Field(None, min_length=12, max_length=100)
+    password: Optional[str] = Field(None, min_length=12, max_length=72)
 
     @field_validator('password')
     @classmethod

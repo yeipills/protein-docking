@@ -13,7 +13,9 @@ from pathlib import Path
 sys.path.append(str(Path(__file__).parents[1]))
 
 from app.database import Base
-from app.config import settings
+from app.config import get_settings
+
+settings = get_settings()
 
 # Import all models to ensure they're registered with Base
 from app.models.user import User

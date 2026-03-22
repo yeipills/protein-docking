@@ -49,6 +49,7 @@ WORKDIR /app
 # Cleaned in same layer to minimize final image size
 RUN apt-get update && apt-get install -y --no-install-recommends \
     libgomp1 \
+    libmagic1 \
     wget \
     && rm -rf /var/lib/apt/lists/* \
     && apt-get clean
@@ -62,6 +63,8 @@ ENV PATH=/root/.local/bin:$PATH
 # Copy application code
 COPY ./app /app/app
 COPY ./socket_server /app/socket_server
+COPY ./alembic /app/alembic
+COPY ./alembic.ini /app/alembic.ini
 
 # Copy compiled Cython extensions from builder
 # These .so files provide 4-6x performance boost for layer evaluation

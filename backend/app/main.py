@@ -43,10 +43,11 @@ async def lifespan(app: FastAPI):
     # Validate environment configuration
     startup_validation()
 
-    # Create database tables
-    logger.info("Creating database tables...")
-    create_tables()
-    logger.info("Database tables created successfully")
+    # Create database tables - Disabled in favor of Alembic migrations
+    # logger.info("Creating database tables...")
+    # create_tables()
+    # logger.info("Database tables created successfully")
+    logger.info("Database migrations should be handled by Alembic")
 
     yield
 

@@ -1,7 +1,7 @@
 """Add account lockout fields and database indexes
 
-Revision ID: 002_lockout_indexes
-Revises: 001_initial
+Revision ID: 003
+Revises: 002
 Create Date: 2025-11-15
 
 Changes:
@@ -14,8 +14,8 @@ from alembic import op
 import sqlalchemy as sa
 
 # revision identifiers, used by Alembic.
-revision = '002_lockout_indexes'
-down_revision = '001_initial'
+revision = '003'
+down_revision = '002'
 branch_labels = None
 depends_on = None
 
@@ -29,15 +29,11 @@ def upgrade() -> None:
     op.add_column('users', sa.Column('locked_until', sa.DateTime(timezone=True), nullable=True))
 
     # Create composite indexes for better query performance
-    # Index for queries filtering by user_id and created_at (common pattern)
-    op.create_index(
-        'ix_jobs_user_created',
-        'jobs',
-        ['user_id', 'created_at'],
-        unique=False
-    )
+    # NOTE: ix_jobs_user_created already exists in migration 001 as idx_jobs_user_created
+    # NOTE: ix_proteins_user_created already exists in migration 001 as idx_proteins_user_created
+    # NOTE: ix_jobs_status already exists in migration 001
 
-    # Index for queries filtering by user_id, status and created_at
+    # Index for queries filtering by user_id, status and created_at (NEW)
     op.create_index(
         'ix_jobs_user_status_created',
         'jobs',
@@ -45,23 +41,7 @@ def upgrade() -> None:
         unique=False
     )
 
-    # Index for proteins by user_id and created_at
-    op.create_index(
-        'ix_proteins_user_created',
-        'proteins',
-        ['user_id', 'created_at'],
-        unique=False
-    )
-
-    # Index on job status for admin queries
-    op.create_index(
-        'ix_jobs_status',
-        'jobs',
-        ['status'],
-        unique=False
-    )
-
-    # Index on created_at for time-based queries
+    # Index on created_at for time-based queries (NEW)
     op.create_index(
         'ix_jobs_created_at',
         'jobs',
@@ -73,12 +53,9 @@ def upgrade() -> None:
 def downgrade() -> None:
     """Remove account lockout fields and indexes"""
 
-    # Drop indexes
+    # Drop only the indexes we created in this migration
     op.drop_index('ix_jobs_created_at', table_name='jobs')
-    op.drop_index('ix_jobs_status', table_name='jobs')
-    op.drop_index('ix_proteins_user_created', table_name='proteins')
     op.drop_index('ix_jobs_user_status_created', table_name='jobs')
-    op.drop_index('ix_jobs_user_created', table_name='jobs')
 
     # Drop lockout columns
     op.drop_column('users', 'locked_until')

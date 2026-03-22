@@ -33,7 +33,7 @@ def upgrade():
         sa.Column('user_agent', sa.String(length=500), nullable=True),
         sa.Column('request_id', sa.String(length=100), nullable=True),
         sa.Column('description', sa.Text(), nullable=True),
-        sa.Column('metadata', sa.JSON(), nullable=True),
+        sa.Column('extra_metadata', sa.JSON(), nullable=True),
         sa.Column('changes', sa.JSON(), nullable=True),
         sa.Column('error_message', sa.Text(), nullable=True),
         sa.Column('error_code', sa.String(length=50), nullable=True),

@@ -81,7 +81,7 @@ def create_audit_log(
             severity=severity,
             status=status,
             description=description,
-            metadata=metadata,
+            extra_metadata=metadata,
             changes=changes,
             error_message=error_message,
             error_code=error_code,
