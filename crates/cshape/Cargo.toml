@@ -1,0 +1,14 @@
+[package]
+name = "cshape"
+description = "Context-shape server and command-line tool"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+rust-version.workspace = true
+
+[dependencies]
+anyhow = "1.0.104"
+clap = { version = "4.6.7", features = ["derive"] }
+cs-core.workspace = true
+serde = { workspace = true, features = ["derive"] }
+serde_json.workspace = true

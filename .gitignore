@@ -77,3 +77,6 @@ frontend/coverage/
 
 # OS
 Thumbs.db
+
+# Rust
+/target
