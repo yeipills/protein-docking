@@ -302,13 +302,13 @@ mod tests {
             let k = idx / (dims[0] * dims[1]);
             [i as f64, j as f64, k as f64]
         };
-        for idx in 0..n {
+        for (idx, &got) in d.iter().enumerate() {
             let p = coords(idx);
             let best = (0..n)
                 .filter(|&f| feature[f])
                 .map(|f| dist2(coords(f), p).sqrt() * 0.5)
                 .fold(f64::INFINITY, f64::min);
-            assert!((d[idx] as f64 - best).abs() < 1e-4, "{} vs {best}", d[idx]);
+            assert!((got as f64 - best).abs() < 1e-4, "{got} vs {best}");
         }
     }
 }

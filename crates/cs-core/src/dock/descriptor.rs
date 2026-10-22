@@ -63,7 +63,7 @@ pub struct DescriptorParams {
 impl Default for DescriptorParams {
     fn default() -> Self {
         Self {
-            spacing: 3.0,
+            spacing: 2.5,
             normal_radius: 5.0,
             ring_radii: vec![1.5, 3.0, 4.5, 6.0, 7.5, 9.0],
             heights: vec![-3.75, -2.25, -0.75, 0.75, 2.25, 3.75],
@@ -99,15 +99,15 @@ impl DescriptorParams {
         {
             return bad("ring radii must be >= 0 and heights finite");
         }
-        if !self.tilt_angles.iter().all(|t| t.is_finite() && t.abs() <= 90.0)
+        if !self
+            .tilt_angles
+            .iter()
+            .all(|t| t.is_finite() && t.abs() <= 90.0)
             || self.tilt_azimuths > 64
         {
             return bad("tilt angles must be within ±90° and tilt_azimuths <= 64");
         }
-        if !(self.shell > 0.0)
-            || !(self.core >= 0.0)
-            || !(self.surf > 0.0)
-            || !self.gap.is_finite()
+        if !(self.shell > 0.0) || !(self.core >= 0.0) || !(self.surf > 0.0) || !self.gap.is_finite()
         {
             return bad("shell and surf must be > 0, core >= 0 and gap finite");
         }
@@ -126,7 +126,8 @@ pub enum Role {
     Ligand,
 }
 
-/// Critical points of one surface with their frames and packed context shapes.
+/// Critical points of one surface with their frames and packed context shapes. For the
+/// ligand role every critical point appears once per frame (base + tilted copies).
 pub struct Descriptors {
     pub points: Vec<V3>,
     /// Local frame per point: `[x, y, n]`, orthonormal and right-handed, `n` outward.

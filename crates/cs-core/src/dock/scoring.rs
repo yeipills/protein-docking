@@ -2,8 +2,9 @@
 //!
 //! The descriptor match only looks at one ~10 Å patch. Candidates are re-scored on the whole
 //! interface with the heavy atoms of both partners. With `d` the distance from an atom centre
-//! to the partner's van der Waals surface (negative inside, and then as deep as the true
-//! penetration, not just the distance to the nearest atom centre):
+//! to the partner's van der Waals surface (negative inside the partner's solvent-excluded
+//! volume, and then as deep as the true penetration, not just the distance to the nearest
+//! atom centre):
 //!
 //! - **contacts**: atoms with `clash_cut ≤ d ≤ contact_cut` (≈ heavy-atom pairs at 3–4.5 Å)
 //!   count 1, with linear ramps of 0.5 Å below and 1 Å above; counted on both sides and
@@ -15,6 +16,9 @@
 //!   potential (apolar / polar / cationic / anionic, see [`PAIR_ENERGY`]) that rewards
 //!   apolar burial and salt bridges and penalizes burying charges against apolar atoms and
 //!   like charges. A desolvation and electrostatics proxy, not a fitted force field.
+//! - **propensity**: contact-weighted interface propensity of the residues of the contacting
+//!   atoms ([`interface_propensity`]): native interfaces are rich in aromatic and large
+//!   apolar residues and poor in charged ones, which the contact count alone ignores.
 //!
 //! Every term is a lookup in a precomputed grid (receptor fields for ligand atoms and vice
 //! versa). Atoms are processed in groups of up to 8 consecutive atoms, and a group is skipped
@@ -41,6 +45,8 @@ pub struct ScoreParams {
     pub w_contact: f64,
     pub w_clash: f64,
     pub w_potential: f64,
+    /// Weight of the interface propensity term.
+    pub w_propensity: f64,
 }
 
 impl Default for ScoreParams {
@@ -49,8 +55,9 @@ impl Default for ScoreParams {
             contact_cut: 2.8,
             clash_cut: 1.0,
             w_contact: 1.0,
-            w_clash: 5.0,
+            w_clash: 3.0,
             w_potential: 1.0,
+            w_propensity: 3.0,
         }
     }
 }
@@ -61,9 +68,14 @@ impl ScoreParams {
             && self.contact_cut + 1.0 < VDW_CAP
             && self.clash_cut < self.contact_cut
             && self.clash_cut > -VDW_CAP
-            && [self.w_contact, self.w_clash, self.w_potential]
-                .iter()
-                .all(|w| w.is_finite());
+            && [
+                self.w_contact,
+                self.w_clash,
+                self.w_potential,
+                self.w_propensity,
+            ]
+            .iter()
+            .all(|w| w.is_finite());
         if !ok {
             return Err(Error::Invalid(
                 "score: need 0 < contact_cut < 3.5, -4.5 < clash_cut < contact_cut and finite weights"
@@ -82,12 +94,16 @@ pub struct ScoreComponents {
     pub contacts: f64,
     pub clash: f64,
     pub potential: f64,
+    /// Interface propensity of the contacting atoms' residues ([`interface_propensity`]),
+    /// contact-weighted, averaged over both sides.
+    pub propensity: f64,
 }
 
 impl ScoreComponents {
     /// Weighted total (higher is better). `potential` is an energy, so it is subtracted.
     pub fn total(&self, p: &ScoreParams) -> f64 {
         p.w_contact * self.contacts - p.w_clash * self.clash - p.w_potential * self.potential
+            + p.w_propensity * self.propensity
     }
 }
 
@@ -109,6 +125,37 @@ pub const PAIR_ENERGY: [[f64; 4]; 4] = [
 ];
 const POT_NEAR: f64 = 4.5;
 const POT_FAR: f64 = 6.0;
+
+/// Interface propensity of a residue type: how much more often it is found in
+/// protein–protein interfaces than on the rest of the surface (log-odds, rounded; after
+/// Jones & Thornton, PNAS 1996, and later surveys). Aromatic and large apolar residues and
+/// arginine are enriched, charged and small polar ones depleted. A one-body desolvation
+/// proxy.
+pub fn interface_propensity(res_name: &str) -> f64 {
+    match res_name {
+        "TRP" => 0.8,
+        "TYR" => 0.65,
+        "MET" => 0.6,
+        "PHE" => 0.6,
+        "ILE" => 0.45,
+        "LEU" => 0.4,
+        "CYS" => 0.4,
+        "HIS" => 0.4,
+        "ARG" => 0.3,
+        "VAL" => 0.25,
+        "ASN" => 0.05,
+        "GLY" => -0.05,
+        "GLN" => -0.1,
+        "ALA" => -0.15,
+        "THR" => -0.2,
+        "PRO" => -0.25,
+        "SER" => -0.3,
+        "LYS" => -0.4,
+        "GLU" => -0.6,
+        "ASP" => -0.7,
+        _ => 0.0,
+    }
+}
 
 /// Class of an atom for [`PAIR_ENERGY`].
 pub fn atom_class(a: &Atom) -> usize {
@@ -163,6 +210,7 @@ fn groups(atoms: &[V3]) -> Vec<Group> {
 struct Side {
     atoms: Vec<V3>,
     class: Vec<u8>,
+    propensity: Vec<f32>,
     groups: Vec<Group>,
     /// Signed distance to this partner's vdW surface (what the *other* side's atoms see).
     field: VdwField,
@@ -175,6 +223,10 @@ impl Side {
             groups: groups(&pos),
             atoms: pos,
             class: atoms.iter().map(|a| atom_class(a) as u8).collect(),
+            propensity: atoms
+                .iter()
+                .map(|a| interface_propensity(&a.res_name) as f32)
+                .collect(),
             field: VdwField::new(atoms, grid_spacing),
         }
     }
@@ -296,7 +348,9 @@ impl Scorer {
                 if d >= VDW_CAP {
                     continue;
                 }
-                lig_contacts += contact(d);
+                let w = contact(d);
+                lig_contacts += w;
+                c.propensity += w * self.lig.propensity[i] as f64;
                 c.clash += clash(d);
                 c.potential += self.rec_pot[self.lig.class[i] as usize].sample_or_zero(x);
             }
@@ -325,7 +379,9 @@ impl Scorer {
                 if d >= VDW_CAP {
                     continue;
                 }
-                rec_contacts += contact(d);
+                let w = contact(d);
+                rec_contacts += w;
+                c.propensity += w * self.rec.propensity[i] as f64;
                 c.clash += clash(d);
             }
         };
@@ -338,6 +394,7 @@ impl Scorer {
         }
         c.contacts = 0.5 * (lig_contacts + rec_contacts);
         c.clash *= 0.5;
+        c.propensity *= 0.5;
         c
     }
 
@@ -472,9 +529,10 @@ struct VdwField {
 const COARSE: usize = 2;
 
 impl VdwField {
-    /// Outside: exact `min |x - c| - r`, clamped at [`VDW_CAP`]. Inside: minus the distance
-    /// to the outside (distance transform), so deep overlaps get large penalties; the plain
-    /// `min |x - c| - r` is never deeper than one atom radius.
+    /// Outside: exact `min |x - c| - r`, clamped at [`VDW_CAP`]. Inside (vdW spheres and
+    /// probe-inaccessible voids): minus the distance to the outside (distance transform), so
+    /// deep overlaps get large penalties; the plain `min |x - c| - r` is never deeper than one
+    /// atom radius.
     fn new(atoms: &[&Atom], h: f64) -> VdwField {
         let cap = VDW_CAP;
         // Wide margin: within GROUP_RADIUS + 2 Å + 2h of the box boundary the field is >= cap,
@@ -488,15 +546,27 @@ impl VdwField {
             |a, d| (d - a.vdw_radius()) as f32,
             f32::min,
         );
-        let outside: Vec<bool> = fine.data.iter().map(|&v| v >= 0.0).collect();
-        let inside: Vec<bool> = outside.iter().map(|&o| !o).collect();
+        // Solid = vdW spheres plus every void a 1.4 Å probe cannot reach (the SES interior).
+        // The vdW union alone is porous: gaps between buried atoms would count as "outside"
+        // and an interpenetrating partner would collect contacts there instead of clashes.
+        const PROBE: f32 = 1.4;
+        let accessible: Vec<bool> = fine.data.iter().map(|&v| v >= PROBE).collect();
+        let reach = distance_transform(fine.dims, h, &accessible);
+        let margin = PROBE + 0.5 * h as f32;
+        let inside: Vec<bool> = fine
+            .data
+            .iter()
+            .zip(&reach)
+            .map(|(&v, &e)| v < 0.0 || e > margin)
+            .collect();
+        let outside: Vec<bool> = inside.iter().map(|&i| !i).collect();
         let (depth, to_inside) = rayon::join(
             || distance_transform(fine.dims, h, &outside),
             || distance_transform(fine.dims, h, &inside),
         );
-        for (v, d) in fine.data.iter_mut().zip(&depth) {
-            if *v < 0.0 {
-                *v = -d.max(-*v);
+        for ((v, d), &is_in) in fine.data.iter_mut().zip(&depth).zip(&inside) {
+            if is_in {
+                *v = -d.max(-v.min(0.0));
             }
         }
         // Lower bound of the true distance at each node, also beyond the clamp: the nearest

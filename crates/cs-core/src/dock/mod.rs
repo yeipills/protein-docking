@@ -4,17 +4,20 @@
 //! Pipeline ([`run`]):
 //!
 //! 1. **Critical points** every `descriptor.spacing` Å on both surfaces, each with a patch
-//!    normal and a local frame ([`descriptor`]).
+//!    normal and a local frame ([`descriptor`]). Ligand points also get frames tilted off the
+//!    normal, because the patch normals of two surfaces in contact disagree by 10–20°.
 //! 2. **Context shapes**: the neighbourhood of each point sampled on rings about the normal
-//!    and packed into bit masks (inside / deep core / exterior shell), so that a rotation
-//!    about the normal is a cyclic bit shift.
-//! 3. **Matching**: every receptor point × ligand point × [`descriptor::K`] rotations is
-//!    scored with AND + popcount (fit minus clash) and the best seeds are kept
-//!    ([`matching`]).
+//!    and packed into bit masks (inside / deep core / exterior shell / surface layer), so a
+//!    rotation about the normal is a cyclic bit shift.
+//! 3. **Matching**: every receptor point × ligand frame × [`descriptor::K`] rotations is
+//!    scored with AND + popcount (fill + surface coincidence − clash), keeping the best
+//!    seeds per receptor point and overall ([`matching`]).
 //! 4. **Poses**: each seed defines a rigid transform of the ligand putting the two points
-//!    together with opposed normals ([`descriptor::pose`]).
-//! 5. **Re-scoring** with heavy atoms (contacts, clashes, contact potential), local rigid
-//!    refinement of the best, and **clustering** ([`scoring`]).
+//!    together with opposed normals ([`descriptor::pose`]); near-duplicates are dropped.
+//! 5. **Atom scoring**: the best seeds (descriptor order) get a short rigid refinement with a
+//!    soft atom score, the best of those a full refinement with the final score (contacts,
+//!    clashes, contact potential, interface propensity), and the results are **clustered**
+//!    ([`scoring`]).
 //!
 //! The engine is generic over the surface representation ([`Surface`]): a triangle mesh
 //! ([`MeshSurface`]) or the built-in atom model ([`AtomSurface`]). Everything is
@@ -23,7 +26,6 @@
 pub mod descriptor;
 pub mod grid3;
 pub mod matching;
-pub mod native;
 pub mod scoring;
 pub mod surface;
 
@@ -34,10 +36,11 @@ use serde::{Deserialize, Serialize};
 
 pub use descriptor::DescriptorParams;
 pub use scoring::{RefineParams, ScoreComponents, ScoreParams};
-pub use surface::{AtomSurface, AtomSurfaceParams, MeshSurface, Surface, SurfacePoint};
+pub use surface::{AtomSurface, AtomSurfaceParams, MeshSurface, SesSurface, Surface, SurfacePoint};
 
 use crate::error::{Error, Result};
 use crate::geom::transform::Rigid;
+use crate::geom::vec3::*;
 use crate::io::pdb::{Structure, write_atom};
 use crate::mesh::Mesh;
 use crate::progress::{Progress, check};
@@ -64,6 +67,16 @@ impl DockInput {
         Ok(DockInput::new(structure, Box::new(surface)))
     }
 
+    /// Partner whose surface is the SES from the built-in generator ([`SesSurface`]).
+    pub fn from_ses(
+        structure: Structure,
+        params: &crate::surface::SesParams,
+        progress: &dyn Progress,
+    ) -> Result<DockInput> {
+        let surface = SesSurface::new(&structure.atoms, params, progress)?;
+        Ok(DockInput::new(structure, Box::new(surface)))
+    }
+
     /// Partner whose surface is a closed, outward-oriented triangle mesh (MSMS, SES generator).
     pub fn from_mesh(structure: Structure, mesh: Mesh) -> DockInput {
         DockInput::new(structure, Box::new(MeshSurface::new(mesh)))
@@ -79,16 +92,22 @@ pub struct DockParams {
     pub weights: matching::MatchWeights,
     /// Seeds kept per receptor critical point (best ligand points, best rotation each).
     pub per_point: usize,
-    /// Seeds kept in total, best descriptor score first; all are re-scored with atoms.
+    /// Seeds kept in total, best descriptor score first.
     pub max_candidates: usize,
-    /// Soft atom score used to rank all seeds before refinement: seeds are only accurate to a
-    /// few Å, so overlaps are tolerated more than in the final score.
-    pub screen: ScoreParams,
-    /// Final atom score (refinement and ranking).
+    /// Seeds whose ligand placements agree within about this many Å are duplicates; only
+    /// the best of each is kept.
+    pub dedup_distance: f64,
+    /// How many of the best (deduplicated) seeds get a short refinement with the soft score.
+    pub quick_top: usize,
+    /// Objective of the short refinement: a seed is only accurate to a few Å, so overlaps
+    /// are tolerated more than in the final score.
+    pub soft: ScoreParams,
+    pub quick_refine: RefineParams,
+    /// Final atom score (full refinement and ranking).
     pub score: ScoreParams,
     /// Spacing of the atom score grids, in Å.
     pub score_grid_spacing: f64,
-    /// How many of the best screened poses get local refinement.
+    /// How many of the best poses after the short refinement get the full refinement.
     pub refine_top: usize,
     pub refine: RefineParams,
     /// Clustering radius: ligand Cα RMSD between poses, in Å.
@@ -102,18 +121,30 @@ impl Default for DockParams {
         Self {
             descriptor: DescriptorParams::default(),
             weights: matching::MatchWeights::default(),
-            per_point: 4,
-            max_candidates: 20_000,
-            screen: ScoreParams {
+            per_point: 30,
+            max_candidates: 60_000,
+            dedup_distance: 2.0,
+            quick_top: 2000,
+            soft: ScoreParams {
                 contact_cut: 3.3,
                 clash_cut: 0.0,
                 w_clash: 1.0,
+                w_propensity: 0.0,
                 ..ScoreParams::default()
+            },
+            quick_refine: RefineParams {
+                step: 1.5,
+                rotation_arc: 1.5,
+                min_step: 0.4,
+                max_evaluations: 40,
             },
             score: ScoreParams::default(),
             score_grid_spacing: 0.75,
-            refine_top: 400,
-            refine: RefineParams::default(),
+            refine_top: 1000,
+            refine: RefineParams {
+                max_evaluations: 150,
+                ..RefineParams::default()
+            },
             cluster_radius: 4.0,
             n_poses: 100,
         }
@@ -125,10 +156,14 @@ impl DockParams {
     #[allow(clippy::neg_cmp_op_on_partial_ord)]
     pub fn validate(&self) -> Result<()> {
         self.descriptor.validate()?;
-        self.screen.validate()?;
+        self.soft.validate()?;
         self.score.validate()?;
         let w = &self.weights;
-        if w.fill < 0 || w.surface < 0 || w.clash < 0 || self.per_point == 0 || self.max_candidates == 0
+        if w.fill < 0
+            || w.surface < 0
+            || w.clash < 0
+            || self.per_point == 0
+            || self.max_candidates == 0
         {
             return Err(Error::Invalid(
                 "match weights must be >= 0, per_point and max_candidates > 0".into(),
@@ -164,10 +199,13 @@ pub struct DockStats {
     pub ligand_points: usize,
     /// Receptor × ligand critical point pairs scored (each over all rotations).
     pub pairs: u64,
+    /// Seeds kept by the matching stage.
     pub candidates: usize,
+    /// Seeds left after removing near-duplicates.
+    pub seeds: usize,
     pub seconds_descriptors: f64,
     pub seconds_matching: f64,
-    pub seconds_rescoring: f64,
+    /// Seed poses, atom grids, both refinement stages.
     pub seconds_refinement: f64,
     pub seconds_total: f64,
 }
@@ -241,16 +279,11 @@ pub fn run_with_stats(
     stats.seconds_matching = t1.elapsed().as_secs_f64();
     check(progress)?;
 
-    let t2 = Instant::now();
-    progress.report("rescoring", 0.6);
-    let scorer = scoring::Scorer::new(
-        &receptor.structure,
-        &ligand.structure,
-        params.score_grid_spacing,
-    )?;
+    // Seeds in descriptor order, without near-duplicates.
+    let t3 = Instant::now();
     let gap = params.descriptor.gap;
-    let mut scored: Vec<(Rigid, ScoreComponents, f64)> = matches
-        .par_iter()
+    let seeds: Vec<(Rigid, ScoreComponents, f64)> = matches
+        .iter()
         .map(|m| {
             let (p, q) = (m.p as usize, m.q as usize);
             let t = descriptor::pose(
@@ -261,43 +294,64 @@ pub fn run_with_stats(
                 m.k as usize,
                 gap,
             );
-            let mut c = scorer.evaluate(&t, &params.screen);
-            c.shape = m.score as f64;
-            let s = c.total(&params.screen);
-            (t, c, s)
+            let c = ScoreComponents {
+                shape: m.score as f64,
+                ..ScoreComponents::default()
+            };
+            (t, c, c.shape)
         })
         .collect();
-    // Stable sort keeps the descriptor order among equal scores: deterministic.
-    scored.sort_by(|a, b| b.2.total_cmp(&a.2));
-    stats.seconds_rescoring = t2.elapsed().as_secs_f64();
+    let reference = cluster_reference(&ligand.structure);
+    let mut scored = dedup(seeds, &reference, params.dedup_distance);
+    stats.seeds = scored.len();
+    let scorer = scoring::Scorer::new(
+        &receptor.structure,
+        &ligand.structure,
+        params.score_grid_spacing,
+    )?;
     check(progress)?;
 
-    let t3 = Instant::now();
-    progress.report("refinement", 0.75);
-    scored.truncate(params.refine_top.max(params.n_poses));
-    let n_refine = params.refine_top.min(scored.len());
-    let refined: Vec<(Rigid, ScoreComponents, f64)> = scored[..n_refine]
+    progress.report("refinement", 0.7);
+    let final_total = |c: &ScoreComponents| c.total(&params.score);
+    // Short refinement of the best seeds with the soft score, then the final score.
+    scored.truncate(params.quick_top.max(params.refine_top).max(params.n_poses));
+    let n_quick = params.quick_top.min(scored.len());
+    let mut all: Vec<(Rigid, ScoreComponents, f64)> = scored
+        .par_iter()
+        .enumerate()
+        .map(|(i, (t, c0, _))| {
+            check(progress)?;
+            let t = if i < n_quick {
+                scorer.refine(t, &params.soft, &params.quick_refine).0
+            } else {
+                *t
+            };
+            let mut c = scorer.evaluate(&t, &params.score);
+            c.shape = c0.shape;
+            Ok((t, c, final_total(&c)))
+        })
+        .collect::<Result<_>>()?;
+    all.sort_by(|a, b| b.2.total_cmp(&a.2));
+    check(progress)?;
+
+    // Full refinement of the best with the final score.
+    progress.report("refinement", 0.8);
+    all.truncate(params.refine_top.max(params.n_poses));
+    let n_refine = params.refine_top.min(all.len());
+    let refined: Vec<(Rigid, ScoreComponents, f64)> = all[..n_refine]
         .par_iter()
         .map(|(t, c0, _)| {
             check(progress)?;
             let (t, mut c) = scorer.refine(t, &params.score, &params.refine);
             c.shape = c0.shape;
-            Ok((t, c, c.total(&params.score)))
+            Ok((t, c, final_total(&c)))
         })
         .collect::<Result<_>>()?;
-    // Unrefined leftovers (only when n_poses > refine_top) are re-scored with the final
-    // score so that all totals are comparable.
-    let mut all = refined;
-    all.extend(scored[n_refine..].iter().map(|(t, c0, _)| {
-        let mut c = scorer.evaluate(t, &params.score);
-        c.shape = c0.shape;
-        (*t, c, c.total(&params.score))
-    }));
+    all.splice(..n_refine, refined);
     all.sort_by(|a, b| b.2.total_cmp(&a.2));
     stats.seconds_refinement = t3.elapsed().as_secs_f64();
 
     progress.report("clustering", 0.95);
-    let reference = cluster_reference(&ligand.structure);
     let transforms: Vec<Rigid> = all.iter().map(|x| x.0).collect();
     let clusters = scoring::cluster(&transforms, &reference, params.cluster_radius);
     let poses = clusters
@@ -319,7 +373,7 @@ pub fn run_with_stats(
 
 /// Atoms used to compare poses: Cα (all heavy atoms when there are none), at most 128,
 /// evenly spread along the chain.
-fn cluster_reference(ligand: &Structure) -> Vec<crate::geom::vec3::V3> {
+fn cluster_reference(ligand: &Structure) -> Vec<V3> {
     let mut pts: Vec<_> = ligand
         .atoms
         .iter()
@@ -331,6 +385,37 @@ fn cluster_reference(ligand: &Structure) -> Vec<crate::geom::vec3::V3> {
     }
     let step = pts.len().div_ceil(128).max(1);
     pts.into_iter().step_by(step).collect()
+}
+
+/// Drops poses that place the reference atoms like an earlier (better) pose: same cell of a
+/// grid of `distance` Å for the centroid and for two far reference atoms. Approximate (two
+/// near-identical poses can straddle a cell boundary) but linear time, which matters for
+/// tens of thousands of seeds; the final clustering is exact.
+fn dedup<T>(poses: Vec<(Rigid, T, f64)>, reference: &[V3], distance: f64) -> Vec<(Rigid, T, f64)> {
+    if distance <= 0.0 || reference.is_empty() {
+        return poses;
+    }
+    let n = reference.len() as f64;
+    let c = scale(reference.iter().fold([0.0; 3], |a, b| add(a, *b)), 1.0 / n);
+    let far = |from: V3| {
+        *reference
+            .iter()
+            .max_by(|a, b| dist2(**a, from).total_cmp(&dist2(**b, from)))
+            .unwrap()
+    };
+    let a = far(c);
+    let b = far(a);
+    let mut seen = std::collections::HashSet::new();
+    poses
+        .into_iter()
+        .filter(|(t, _, _)| {
+            let key: [i32; 9] = std::array::from_fn(|i| {
+                let p = t.apply([c, a, b][i / 3]);
+                (p[i % 3] / distance).floor() as i32
+            });
+            seen.insert(key)
+        })
+        .collect()
 }
 
 /// A copy of `s` with every atom moved by `t`.

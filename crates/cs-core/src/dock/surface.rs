@@ -88,6 +88,58 @@ impl Surface for MeshSurface {
     }
 }
 
+/// The SES from the built-in generator ([`crate::surface`]): its exact grid field where it
+/// is defined (from `-band` inside to `probe` outside) and the distance to its mesh beyond.
+///
+/// The grid alone clamps distances outside `[-band, probe]`, too short for the descriptor
+/// shells; the mesh alone gets the sign wrong at a few percent of deep interior points
+/// (pseudonormals of slivers from marching cubes). Together they are exact near the surface,
+/// robust in sign everywhere and cheap: most samples never touch the mesh.
+pub struct SesSurface {
+    grid: crate::surface::SesGrid,
+    mesh: MeshSurface,
+}
+
+impl SesSurface {
+    /// SES of `atoms`. The interior band is raised to at least 4 Å so that the descriptor
+    /// classes (down to `core` = 1.5 Å and the deepest rings) come from the exact field.
+    pub fn new(
+        atoms: &[Atom],
+        params: &crate::surface::SesParams,
+        progress: &dyn Progress,
+    ) -> Result<Self> {
+        let params = crate::surface::SesParams {
+            interior_band: params.interior_band.max(4.0),
+            ..params.clone()
+        };
+        let grid = crate::surface::SesGrid::from_atoms(atoms, &params, progress)?;
+        let mesh = MeshSurface::new(grid.mesh(progress)?);
+        Ok(SesSurface { grid, mesh })
+    }
+
+    pub fn mesh(&self) -> &Mesh {
+        self.mesh.mesh()
+    }
+}
+
+impl Surface for SesSurface {
+    fn signed_distance(&self, p: V3) -> f64 {
+        let g = self.grid.signed_distance(p);
+        let eps = 1e-3;
+        if g >= self.grid.probe() - eps {
+            self.mesh.signed_distance(p).abs().max(g)
+        } else if g <= -self.grid.band() + eps {
+            -self.mesh.signed_distance(p).abs().max(-g)
+        } else {
+            g
+        }
+    }
+
+    fn surface_points(&self) -> Vec<SurfacePoint> {
+        self.mesh.surface_points()
+    }
+}
+
 /// Parameters of the atom-only surface model.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(default, deny_unknown_fields)]
@@ -98,6 +150,9 @@ pub struct AtomSurfaceParams {
     pub spacing: f64,
     /// Empty space kept around the molecule, in Å.
     pub margin: f64,
+    /// Turn internal cavities (exterior space not connected to the outside) into interior,
+    /// as MSMS does by default: their walls are not docking surface.
+    pub fill_cavities: bool,
 }
 
 impl Default for AtomSurfaceParams {
@@ -106,6 +161,7 @@ impl Default for AtomSurfaceParams {
             probe: 1.4,
             spacing: 0.5,
             margin: 6.0,
+            fill_cavities: true,
         }
     }
 }
@@ -222,12 +278,69 @@ impl AtomSurface {
             };
         }
         check(progress)?;
+        if params.fill_cavities {
+            fill_cavities(&mut grid);
+        }
         Ok(AtomSurface { grid })
     }
 
     /// The tabulated signed-distance field.
     pub fn grid(&self) -> &Grid3 {
         &self.grid
+    }
+}
+
+/// Flood fill of the exterior from the grid boundary (6-connected); exterior nodes it does
+/// not reach are cavities and become shallow interior.
+fn fill_cavities(grid: &mut Grid3) {
+    let [nx, ny, nz] = grid.dims;
+    let mut seen = vec![false; grid.len()];
+    let mut stack: Vec<usize> = Vec::new();
+    for k in 0..nz {
+        for j in 0..ny {
+            for i in 0..nx {
+                let border =
+                    i == 0 || j == 0 || k == 0 || i == nx - 1 || j == ny - 1 || k == nz - 1;
+                let idx = grid.index(i, j, k);
+                if border && grid.data[idx] >= 0.0 && !seen[idx] {
+                    seen[idx] = true;
+                    stack.push(idx);
+                }
+            }
+        }
+    }
+    while let Some(idx) = stack.pop() {
+        let (i, j, k) = (idx % nx, (idx / nx) % ny, idx / (nx * ny));
+        let mut visit = |n: usize| {
+            if !seen[n] && grid.data[n] >= 0.0 {
+                seen[n] = true;
+                stack.push(n);
+            }
+        };
+        if i > 0 {
+            visit(idx - 1);
+        }
+        if i + 1 < nx {
+            visit(idx + 1);
+        }
+        if j > 0 {
+            visit(idx - nx);
+        }
+        if j + 1 < ny {
+            visit(idx + nx);
+        }
+        if k > 0 {
+            visit(idx - nx * ny);
+        }
+        if k + 1 < nz {
+            visit(idx + nx * ny);
+        }
+    }
+    let shallow = -(grid.h as f32);
+    for (v, s) in grid.data.iter_mut().zip(&seen) {
+        if *v >= 0.0 && !s {
+            *v = shallow;
+        }
     }
 }
 
@@ -305,6 +418,24 @@ mod tests {
                 dot(normalize(r), sp.normal)
             );
         }
+    }
+
+    #[test]
+    fn internal_cavity_is_filled() {
+        // A hollow shell of spheres: the inside is a cavity no probe can reach from outside.
+        let dirs = crate::geom::fibonacci_sphere(400);
+        let centers: Vec<V3> = dirs.iter().map(|d| scale(*d, 8.0)).collect();
+        let radii = vec![1.8; centers.len()];
+        let mk = |fill| {
+            let p = AtomSurfaceParams {
+                fill_cavities: fill,
+                ..Default::default()
+            };
+            AtomSurface::from_spheres(&centers, &radii, &p, &NoProgress).unwrap()
+        };
+        assert!(mk(false).signed_distance([0.0; 3]) > 0.0);
+        assert!(mk(true).signed_distance([0.0; 3]) < 0.0);
+        assert!(mk(true).signed_distance([0.0, 0.0, 12.0]) > 0.0);
     }
 
     #[test]
