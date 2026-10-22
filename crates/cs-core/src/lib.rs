@@ -8,6 +8,7 @@
 //! - [`legacy`]: bit-for-bit reproduction of the original thesis scripts, for comparison.
 
 pub mod corrected;
+pub mod dock;
 pub mod error;
 pub mod export;
 pub mod geom;
