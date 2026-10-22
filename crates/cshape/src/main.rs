@@ -1,5 +1,3 @@
-mod pipeline;
-
 use std::path::{Path, PathBuf};
 use std::time::Instant;
 
@@ -8,6 +6,7 @@ use clap::{Parser, Subcommand, ValueEnum};
 use cs_core::Mode;
 use cs_core::corrected::Params;
 use cs_core::progress::Progress;
+use cshape::{pipeline, server};
 
 #[derive(Parser)]
 #[command(name = "cshape", version, about = "Context shapes of protein surfaces")]
@@ -46,6 +45,29 @@ enum Command {
     },
     /// Compare the text files two output directories have in common, line by line.
     Compare { a: PathBuf, b: PathBuf },
+    /// Run the web server (API + web client).
+    Serve {
+        #[arg(long, env = "CSHAPE_ADDR", default_value = "0.0.0.0:8080")]
+        addr: std::net::SocketAddr,
+        /// Directory for the database and job files
+        #[arg(long, env = "CSHAPE_DATA", default_value = "var")]
+        data: PathBuf,
+        /// Built web client to serve (web/dist)
+        #[arg(long, env = "CSHAPE_WEB", default_value = "web/dist")]
+        web: PathBuf,
+        /// Directory with sample proteins
+        #[arg(long, env = "CSHAPE_SAMPLES", default_value = "data/samples")]
+        samples: PathBuf,
+        /// Access token required by the API; unset means no authentication
+        #[arg(long, env = "CSHAPE_TOKEN", hide_env_values = true)]
+        token: Option<String>,
+        /// Jobs computed at the same time (each one already uses every core)
+        #[arg(long, env = "CSHAPE_WORKERS", default_value_t = 1)]
+        workers: usize,
+        /// Maximum upload size in MiB
+        #[arg(long, env = "CSHAPE_MAX_UPLOAD_MB", default_value_t = 1024)]
+        max_upload_mb: usize,
+    },
 }
 
 #[derive(Clone, Copy, ValueEnum)]
@@ -112,6 +134,35 @@ fn main() -> anyhow::Result<()> {
             Ok(())
         }
         Command::Compare { a, b } => compare(&a, &b),
+        Command::Serve {
+            addr,
+            data,
+            web,
+            samples,
+            token,
+            workers,
+            max_upload_mb,
+        } => {
+            tracing_subscriber::fmt()
+                .with_env_filter(
+                    tracing_subscriber::EnvFilter::try_from_default_env()
+                        .unwrap_or_else(|_| "info,tower_http=warn".into()),
+                )
+                .init();
+            let opts = server::ServeOptions {
+                addr,
+                data_dir: data,
+                web_dir: Some(web),
+                samples_dir: samples,
+                token,
+                workers,
+                max_upload_mb,
+            };
+            tokio::runtime::Builder::new_multi_thread()
+                .enable_all()
+                .build()?
+                .block_on(server::serve(opts))
+        }
     }
 }
 
