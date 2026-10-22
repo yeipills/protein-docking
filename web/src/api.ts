@@ -1,6 +1,6 @@
 // Typed client for the cshape HTTP API.
 
-export type Mode = 'corrected' | 'legacy'
+export type Mode = 'corrected' | 'legacy' | 'dock'
 export type Status = 'queued' | 'running' | 'done' | 'failed' | 'cancelled'
 export type LayerName = 'ses' | 'in1' | 'in2' | 'in3' | 'in4' | 'out1' | 'out2' | 'out3' | 'out4' | 'vol'
 
@@ -23,7 +23,7 @@ export interface Summary {
   radius: number
   layer_occupancy: { layer: LayerName; fraction: number }[]
   params?: Params
-  input: { vertices: number; faces: number }
+  input: { vertices: number; faces: number; atoms?: number | null }
 }
 
 export interface OutputFile {
@@ -50,7 +50,13 @@ export interface Job {
   started_at: string | null
   finished_at: string | null
   spec?: { name: string; mode: Mode; params: Params; legacy_intermediate: boolean }
-  report?: Report
+  report?: Report | DockReport
+}
+
+export interface DockReport {
+  summary: DockSummary
+  timings_ms: { read: number; compute: number; write: number }
+  files: OutputFile[]
 }
 
 export interface JobEvent {
@@ -63,6 +69,63 @@ export interface JobEvent {
 export interface Sample {
   name: string
   has_stl: boolean
+}
+
+export type Capri = 'incorrect' | 'acceptable' | 'medium' | 'high'
+
+export interface Metrics {
+  fnat: number
+  fnonnat: number
+  irmsd: number
+  lrmsd: number
+  dockq: number
+  capri: Capri
+}
+
+export interface RigidT {
+  rot: number[][]
+  trans: number[]
+}
+
+export interface DockPose {
+  rank: number
+  transform: RigidT
+  score: number
+  cluster_size: number
+  components: Record<string, number>
+  metrics?: Metrics
+}
+
+export interface DockSummary {
+  kind: 'dock'
+  surface: 'atoms' | 'ses'
+  receptor_atoms: number
+  ligand_atoms: number
+  randomize_seed: number | null
+  stats: {
+    receptor_points: number
+    ligand_points: number
+    pairs: number
+    candidates: number
+    seeds: number
+    seconds_descriptors: number
+    seconds_matching: number
+    seconds_refinement: number
+    seconds_total: number
+  }
+  poses: DockPose[]
+  native: null | {
+    pose: RigidT
+    first_acceptable: number | null
+    first_medium: number | null
+    first_high: number | null
+    best_dockq: number | null
+  }
+}
+
+export interface Complex {
+  name: string
+  has_native: boolean
 }
 
 export interface Config {
@@ -152,6 +215,15 @@ export const api = {
   cancel: (id: string) => request<void>(`/jobs/${id}/cancel`, { method: 'POST' }),
   remove: (id: string) => request<void>(`/jobs/${id}`, { method: 'DELETE' }),
   viewer: (id: string) => request<ArrayBuffer>(`/jobs/${id}/files/viewer.bin`),
+  dockViewer: (id: string) => request<ArrayBuffer>(`/jobs/${id}/files/dock_viewer.bin`),
+  complexes: () => request<Complex[]>('/complexes'),
+  createDock: (form: FormData) => request<Job>('/dock', { method: 'POST', body: form }),
+  createComplexDock: (name: string, body: object) =>
+    request<Job>(`/complexes/${encodeURIComponent(name)}/dock`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+    }),
 }
 
 /** Streams progress events until the job finishes. Returns a function that stops listening. */

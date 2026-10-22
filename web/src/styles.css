@@ -1067,3 +1067,135 @@ input[type='range'] {
     transition: none !important;
   }
 }
+
+/* ---------------------------------------------------------------- docking */
+
+.tabs {
+  margin-bottom: -8px;
+}
+.tabs button {
+  font-size: 13px;
+}
+
+.pdb-slots {
+  list-style: none;
+  margin: 4px 0 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+.pdb-slot {
+  border: 1px dashed var(--line-2);
+  border-radius: 8px;
+  padding: 10px 10px 9px;
+  cursor: pointer;
+  background: var(--bg-2);
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 2px 6px;
+  min-width: 0;
+  transition: border-color 0.15s, background-color 0.15s;
+}
+.pdb-slot:hover,
+.pdb-slot.over {
+  border-color: var(--amber);
+}
+.pdb-slot b {
+  font-size: 12.5px;
+  font-weight: 500;
+}
+.pdb-slot span {
+  grid-column: 1;
+  font-size: 11.5px;
+  color: var(--dim);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.pdb-slot.ok {
+  border-style: solid;
+  border-color: rgba(140, 207, 126, 0.45);
+}
+.pdb-slot.ok span {
+  color: var(--ok);
+}
+.pdb-slot .link {
+  grid-row: 1 / 3;
+  grid-column: 2;
+  font-size: 18px;
+  color: var(--dim);
+  padding: 0 2px;
+}
+.pdb-slot:focus-visible {
+  outline: 2px solid var(--amber);
+  outline-offset: 2px;
+}
+
+.poses-wrap {
+  max-height: 420px;
+  overflow: auto;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+}
+.poses th {
+  position: sticky;
+  top: 0;
+  background: var(--panel);
+  font: 500 11px var(--mono);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--dim);
+  text-align: left;
+  padding: 8px;
+  border-bottom: 1px solid var(--line);
+}
+.poses th.right {
+  text-align: right;
+}
+.poses tbody tr {
+  cursor: pointer;
+}
+.poses tbody tr.sel td {
+  background: rgba(242, 177, 52, 0.08);
+}
+.poses tbody tr.sel td:first-child {
+  box-shadow: inset 2px 0 0 var(--amber);
+}
+
+.capri {
+  font: 500 11px var(--mono);
+  padding: 1px 7px;
+  border-radius: 4px;
+  border: 1px solid var(--line-2);
+  color: var(--dim);
+}
+.capri.acceptable {
+  color: var(--amber);
+  border-color: rgba(242, 177, 52, 0.5);
+}
+.capri.medium {
+  color: var(--ok);
+  border-color: rgba(140, 207, 126, 0.5);
+}
+.capri.high {
+  color: var(--amber-ink);
+  background: var(--ok);
+  border-color: var(--ok);
+}
+.tag.dock {
+  color: var(--ok);
+  border-color: rgba(140, 207, 126, 0.45);
+}
+.tag.complex {
+  color: var(--ok);
+  border-color: rgba(140, 207, 126, 0.4);
+}
+
+/* Overlay text stays legible over the molecule. */
+.viewer-hint,
+.viewer-hud span {
+  background: rgba(13, 15, 17, 0.72);
+  padding: 2px 7px;
+  border-radius: 4px;
+}

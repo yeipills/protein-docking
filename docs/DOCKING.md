@@ -31,7 +31,19 @@ let pdb = dock::complex_pdb(&receptor.structure, &ligand.structure, &poses[0].tr
 hay azar y los resultados paralelos se combinan en orden fijo) y se puede cancelar con
 `Progress::is_cancelled`.
 
-Ejemplo de línea de órdenes (escribe `poses.json` y los complejos en PDB):
+Desde la CLI, el servidor y la web (ver el [README](../README.md)):
+
+```bash
+cshape dock --receptor r_u.pdb --ligand l_u.pdb \
+    [--native-receptor r_b.pdb --native-ligand l_b.pdb] [--surface atoms|ses] \
+    [--randomize-seed N] [--params docking.json] --out dock/
+cshape bench --category rigid --out bench/
+```
+
+En la web, la pestaña *Docking* acepta receptor y ligando (y opcionalmente el complejo
+unido), y muestra las poses con su calidad CAPRI/DockQ y un visor del complejo.
+
+Ejemplo de línea de órdenes del crate (escribe `poses.json` y los complejos en PDB):
 
 ```bash
 cargo run --release -p cs-core --example dock -- \

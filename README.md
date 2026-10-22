@@ -1,4 +1,4 @@
-# cshape — formas de contexto de superficies proteicas
+# cshape — formas de contexto y docking de proteínas
 
 `cshape` calcula las **formas de contexto** (*context shapes*) de la superficie excluida al
 solvente (SES) de una proteína, a partir de un archivo PDB (la superficie se genera
@@ -10,8 +10,20 @@ cada rayo se clasifica en diez capas: la superficie (`ses`), cuatro capas interi
 explorar en un visor 3D en el navegador y descargar en el formato de texto que usa el visor
 de Unity.
 
+Sobre esas formas, `cshape` también hace **docking rígido proteína–proteína**: busca
+parches de superficie complementarios entre un receptor y un ligando, puntúa las poses con
+los átomos y, si se conoce el complejo real, las califica con los criterios estándar
+**CAPRI y DockQ** (validados contra la implementación oficial).
+
 Todo es un único binario en Rust (núcleo de cálculo, servidor HTTP y CLI) más un cliente web
 estático.
+
+| Documento | Contenido |
+|---|---|
+| [docs/ALGORITHM.md](docs/ALGORITHM.md) | Formas de contexto, defectos del original y validación |
+| [docs/SURFACE.md](docs/SURFACE.md) | Generador de superficie excluida al solvente desde PDB |
+| [docs/DOCKING.md](docs/DOCKING.md) | Motor de docking, parámetros y resultados |
+| [docs/EVALUATION.md](docs/EVALUATION.md) | CAPRI/DockQ y benchmark Docking Benchmark 5.5 |
 
 ## Dos modos de cálculo
 
@@ -42,6 +54,27 @@ Proteína de ejemplo `1AHW_l_u` (11.141 vértices, 22.290 caras), 4 núcleos:
 
 ¹ Con Script04 ya optimizado (búsquedas por diccionario en vez de recorrer listas completas);
 tal como estaba escrito tardaba del orden de una hora.
+
+## Docking
+
+Docking Benchmark 5.5, categoría rígida completa (162 complejos), ligando en posición
+aleatoria, % de casos con al menos una pose de la calidad indicada (aceptable / media / alta):
+
+| | Top 1 | Top 10 | Top 100 | Tiempo medio |
+|---|---|---|---|---|
+| `cshape` (superficie de átomos) | 4 / 2 / 0 | 20 / 8 / 1 | 43 / 15 / 1 | 9,3 s |
+| Poses al azar (referencia) | 0 / 0 / 0 | — | 3 / 0 / 0 | — |
+| Techo rígido (mejor colocación posible) | 100 / 99 / 69 | | | |
+
+Es una línea base clásica de complementariedad de forma: rápida y bien medida, pero lejos
+de los métodos actuales. El mayor margen de mejora está en la puntuación (las poses casi
+nativas suelen generarse pero no quedan arriba). Los detalles y limitaciones, en
+[docs/DOCKING.md](docs/DOCKING.md).
+
+```bash
+make dock     # acopla 1AHW (Fab + factor tisular) y califica cada pose contra el cristal
+make bench    # descarga el benchmark y corre la categoría rígida (~25 min)
+```
 
 ## Inicio rápido
 
@@ -74,6 +107,12 @@ cshape run --vert prot.vert --face prot.face --out resultados/
 cshape run --mode legacy --vert prot.vert --face prot.face --stl prot.stl --out legacy/
 cshape run --vert prot.vert --face prot.face --params params.json   # parámetros propios
 cshape compare dirA/ dirB/        # compara línea a línea los .txt comunes
+
+# Docking: poses ordenadas, PDB de los mejores complejos y, con el complejo real, CAPRI/DockQ
+cshape dock --receptor rec.pdb --ligand lig.pdb --out dock/
+cshape dock --receptor rec_u.pdb --ligand lig_u.pdb \
+    --native-receptor rec_b.pdb --native-ligand lig_b.pdb --randomize-seed 1 --out dock/
+cshape bench --category rigid --limit 20 --out bench/   # Docking Benchmark 5.5
 ```
 
 ## Parámetros (modo corregido)
@@ -103,6 +142,9 @@ quedaban puntos a menos de 10 Å. Para una densidad parecida, use unos 6 Å.
 | *(entrada PDB)* `<nombre>.vert`, `<nombre>.face` | Superficie generada, en formato MSMS |
 | *(modo fiel)* `centroidesPCS.txt`, `<nombre>_rayos_contexto.txt`, `<nombre>_cr_totales.txt` | Salidas de Script02 y Script03 |
 | *(modo fiel, opcional)* `<nombre>_<capa>.txt` (×10) | Archivos intermedios de Script04 |
+| *(docking)* `poses.json` | Poses ordenadas: transformación del ligando, puntaje, componentes y, si hay complejo real, métricas CAPRI/DockQ |
+| *(docking)* `<nombre>_pose_NNN.pdb` | Complejo receptor + ligando acoplado de las mejores poses |
+| *(docking)* `dock_viewer.bin` | Superficies del receptor y del ligando para el visor |
 
 ## API
 
@@ -116,23 +158,27 @@ quedaban puntos a menos de 10 Å. Para una densidad parecida, use unos 6 Å.
 | `GET /api/jobs/{id}/events` | Progreso en vivo (Server-Sent Events) |
 | `GET /api/jobs/{id}/files/{archivo}` · `GET /api/jobs/{id}/archive` | Un archivo · todo en ZIP |
 | `GET /api/samples` · `POST /api/samples/{nombre}/jobs` | Muestras incluidas · calcular una |
+| `POST /api/dock` | Docking (multipart: `receptor`, `ligand`, `native_receptor?` + `native_ligand?`, `surface?` = `atoms`\|`ses`, `params?` JSON, `randomize_seed?`, `complexes?`, `name?`) |
+| `GET /api/complexes` · `POST /api/complexes/{nombre}/dock` | Complejos incluidos · acoplar uno (con evaluación si trae el complejo unido) |
 
 Con `CSHAPE_TOKEN` definido, todas las rutas salvo `/api/health` exigen
 `Authorization: Bearer <token>` (o `?token=` para descargas y EventSource).
 
 Configuración del servidor (variables de entorno o banderas de `cshape serve --help`):
-`CSHAPE_ADDR`, `CSHAPE_DATA`, `CSHAPE_WEB`, `CSHAPE_SAMPLES`, `CSHAPE_TOKEN`,
+`CSHAPE_ADDR`, `CSHAPE_DATA`, `CSHAPE_WEB`, `CSHAPE_SAMPLES`, `CSHAPE_COMPLEXES`, `CSHAPE_TOKEN`,
 `CSHAPE_WORKERS`, `CSHAPE_MAX_UPLOAD_MB`.
 
 ## Estructura del repositorio
 
 ```
-crates/cs-core/   núcleo: lectura MSMS/STL, BVH, distancia con signo, pipelines, exportadores
-crates/cshape/    binario: CLI (run, compare, serve, health) y servidor HTTP
+crates/cs-core/   núcleo: PDB/MSMS/STL, superficie SES, formas de contexto, docking, evaluación
+crates/cshape/    binario: CLI (run, dock, bench, compare, serve, health) y servidor HTTP
 web/              cliente React + three.js
 data/samples/     proteína de ejemplo 1AHW_l_u (.vert, .face, .stl)
+data/complexes/   complejo 1AHW del Docking Benchmark (receptor y ligando, libres y unidos)
 tools/legacy-oracle/  vuelve a ejecutar los scripts originales para regenerar la referencia
-docs/ALGORITHM.md el algoritmo, los defectos del original y cómo se valida
+tools/benchmark/  descarga del Docking Benchmark 5.5 y tabla de casos
+docs/             algoritmo, superficie, docking y evaluación
 ```
 
 ## Pruebas
@@ -141,6 +187,7 @@ docs/ALGORITHM.md el algoritmo, los defectos del original y cómo se valida
 make test     # Rust (incluye la comparación con los scripts originales) + web
 make check    # rustfmt, clippy, tipos de TypeScript
 make oracle   # vuelve a correr los scripts Python originales y compara (≈3 min)
+make dock     # docking de 1AHW con evaluación CAPRI/DockQ (~12 s)
 ```
 
 ## Historia

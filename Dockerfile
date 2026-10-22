@@ -23,11 +23,13 @@ WORKDIR /app
 COPY --from=server /src/target/release/cshape /usr/local/bin/cshape
 COPY --from=web /web/dist /app/web
 COPY data/samples /app/samples
+COPY data/complexes /app/complexes
 USER cshape
 ENV CSHAPE_ADDR=0.0.0.0:8080 \
     CSHAPE_DATA=/app/var \
     CSHAPE_WEB=/app/web \
-    CSHAPE_SAMPLES=/app/samples
+    CSHAPE_SAMPLES=/app/samples \
+    CSHAPE_COMPLEXES=/app/complexes
 EXPOSE 8080
 VOLUME ["/app/var"]
 HEALTHCHECK --interval=30s --timeout=3s CMD ["cshape", "health"]

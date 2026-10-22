@@ -17,9 +17,21 @@ Rust con cliente web.
 - Cliente web (React + three.js) con visor 3D de superficie, puntos críticos, rayos y capas.
 - Imagen Docker de un solo servicio, CI (Rust, web, Docker) y `tools/legacy-oracle`.
 
+- Superficie excluida al solvente generada desde PDB (`cs_core::surface`): campo de
+  distancia exacto y marching cubes sin ambigüedades; error medio 0,014 Å frente a MSMS.
+  Entrada `--pdb` en la CLI, la API y la web.
+- Docking rígido por formas de contexto complementarias (`cs_core::dock`): descriptores en
+  marco local con emparejamiento por bits (AVX2/AVX-512), puntuación por átomos, refinamiento
+  y agrupamiento. `cshape dock`, `POST /api/dock`, pestaña *Docking* en la web con visor del
+  complejo y tabla de poses.
+- Evaluación CAPRI/DockQ (`cs_core::eval`), idéntica a DockQ oficial en 99 poses de prueba,
+  y arnés del Docking Benchmark 5.5 (`cshape bench`, `tools/benchmark/`).
+
 ### Rendimiento
 - `1AHW_l_u`: 141 s con los scripts originales → 0,3 s en modo fiel y 0,08 s en modo
   corregido.
+- Docking: ~9 s por complejo de la categoría rígida; 43 % de los 162 casos con una pose
+  aceptable en el top 100 (20 % en el top 10).
 
 ### Eliminado
 - Backend FastAPI, Celery, Redis, PostgreSQL, Socket.IO, nginx, Prometheus/Grafana y el

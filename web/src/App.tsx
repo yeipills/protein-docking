@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useState } from 'react'
-import { api, setToken, setUnauthorizedHandler, UnauthorizedError, type Config, type Job, type Sample } from './api'
+import { api, setToken, setUnauthorizedHandler, UnauthorizedError, type Complex, type Config, type Job, type Sample } from './api'
 import { JobDetail } from './components/JobDetail'
 import { JobList } from './components/JobList'
+import { NewDock } from './components/NewDock'
 import { NewJob } from './components/NewJob'
 
 function hashId(): string | null {
@@ -12,6 +13,8 @@ function hashId(): string | null {
 export function App() {
   const [config, setConfig] = useState<Config | null>(null)
   const [samples, setSamples] = useState<Sample[]>([])
+  const [complexes, setComplexes] = useState<Complex[]>([])
+  const [tab, setTab] = useState<'shapes' | 'dock'>('shapes')
   const [jobs, setJobs] = useState<Job[]>([])
   const [selected, setSelected] = useState<string | null>(hashId)
   const [needToken, setNeedToken] = useState(false)
@@ -28,6 +31,7 @@ export function App() {
   const load = useCallback(() => {
     api.config().then(setConfig).catch(() => {})
     api.samples().then(setSamples).catch(() => {})
+    api.complexes().then(setComplexes).catch(() => {})
     refresh()
   }, [refresh])
 
@@ -66,14 +70,32 @@ export function App() {
 
       <main className="layout">
         <aside className="sidebar">
-          <NewJob
-            defaults={config?.defaults ?? null}
-            samples={samples}
-            onCreated={(job) => {
-              refresh()
-              select(job.id)
-            }}
-          />
+          <div className="segmented tabs" role="tablist">
+            <button role="tab" className={tab === 'shapes' ? 'on' : ''} onClick={() => setTab('shapes')}>
+              Formas de contexto
+            </button>
+            <button role="tab" className={tab === 'dock' ? 'on' : ''} onClick={() => setTab('dock')}>
+              Docking
+            </button>
+          </div>
+          {tab === 'shapes' ? (
+            <NewJob
+              defaults={config?.defaults ?? null}
+              samples={samples}
+              onCreated={(job) => {
+                refresh()
+                select(job.id)
+              }}
+            />
+          ) : (
+            <NewDock
+              complexes={complexes}
+              onCreated={(job) => {
+                refresh()
+                select(job.id)
+              }}
+            />
+          )}
           <JobList jobs={jobs} selected={selected} onSelect={select} />
         </aside>
         <section className="content">
@@ -135,6 +157,12 @@ function Intro() {
         <li>
           <span>
           <b>Explora</b> el resultado en 3D y descarga los archivos para Unity.
+          </span>
+        </li>
+        <li>
+          <span>
+          <b>Acopla</b> dos proteínas en la pestaña <i>Docking</i>: receptor y ligando en PDB; con el complejo real
+          cada pose se califica con CAPRI y DockQ.
           </span>
         </li>
       </ol>

@@ -40,10 +40,24 @@ export const STAGE_LABEL: Record<string, string> = {
   critical_points: 'puntos críticos',
   rays: 'rayos',
   layers: 'capas',
+  surfaces: 'superficies',
+  descriptors: 'descriptores',
+  matching: 'emparejamiento',
+  refinement: 'refinamiento',
+  clustering: 'agrupamiento',
+  writing: 'escribiendo',
   done: 'escribiendo',
 }
 
 export const MODE_LABEL: Record<string, string> = {
   corrected: 'corregido',
   legacy: 'fiel',
+  dock: 'docking',
+}
+
+export const CAPRI_LABEL: Record<string, string> = {
+  incorrect: 'incorrecta',
+  acceptable: 'aceptable',
+  medium: 'media',
+  high: 'alta',
 }
