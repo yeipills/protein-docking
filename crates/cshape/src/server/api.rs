@@ -23,13 +23,19 @@ use tower::ServiceExt;
 use tower_http::services::ServeFile;
 
 use super::db::Status;
-use super::jobs::{INPUT_DIR, INPUT_FACE, INPUT_PDB, INPUT_STL, INPUT_VERT, Jobs, OUTPUT_DIR};
+use super::jobs::{
+    INPUT_DIR, INPUT_FACE, INPUT_LIGAND, INPUT_NATIVE_LIGAND, INPUT_NATIVE_RECEPTOR, INPUT_PDB,
+    INPUT_RECEPTOR, INPUT_STL, INPUT_VERT, Jobs, OUTPUT_DIR,
+};
+use crate::docking::{DockSpec, DockSurface};
 use crate::pipeline::{Spec, sanitize_name};
+use crate::task::Task;
 
 pub struct AppState {
     pub jobs: Arc<Jobs>,
     pub token: Option<String>,
     pub samples_dir: PathBuf,
+    pub complexes_dir: PathBuf,
 }
 
 type St = State<Arc<AppState>>;
@@ -72,6 +78,9 @@ pub fn router(state: Arc<AppState>, max_upload_bytes: usize) -> Router {
         .route("/jobs/{id}/archive", get(job_archive))
         .route("/samples", get(list_samples))
         .route("/samples/{name}/jobs", post(create_sample_job))
+        .route("/dock", post(create_dock_job))
+        .route("/complexes", get(list_complexes))
+        .route("/complexes/{name}/dock", post(create_complex_dock_job))
         .layer(DefaultBodyLimit::max(max_upload_bytes))
         .route_layer(middleware::from_fn_with_state(state.clone(), auth));
     Router::new()
@@ -504,7 +513,7 @@ async fn create_job(
         }
         let spec = build_spec(opts, file_name.as_deref().unwrap_or("protein"))?;
         check_inputs(input.clone(), &spec).await?;
-        st.jobs.submit(&id, &spec)?;
+        st.jobs.submit(&id, &Task::Shapes(spec))?;
         Ok(())
     }
     .await;
@@ -584,7 +593,256 @@ async fn create_sample_job(
     if let (Some(stl), Mode::Legacy) = (&stl, spec.mode) {
         tokio::fs::copy(stl, input.join(INPUT_STL)).await?;
     }
-    st.jobs.submit(&id, &spec)?;
+    st.jobs.submit(&id, &Task::Shapes(spec))?;
+    let job = st.jobs.db.get(&id)?.ok_or_else(ApiError::not_found)?;
+    Ok((StatusCode::CREATED, Json(job)))
+}
+
+// ------------------------------------------------------------------------------------------
+// Docking jobs
+
+#[derive(Debug, Default, Deserialize)]
+#[serde(deny_unknown_fields)]
+struct DockOptions {
+    name: Option<String>,
+    surface: Option<DockSurface>,
+    params: Option<cs_core::dock::DockParams>,
+    randomize_seed: Option<u64>,
+    complexes: Option<usize>,
+}
+
+fn build_dock_spec(opts: DockOptions, fallback_name: &str) -> ApiResult<DockSpec> {
+    let params = opts.params.unwrap_or_default();
+    params
+        .validate()
+        .map_err(|e| ApiError::bad(format!("params: {e}")))?;
+    let name = opts
+        .name
+        .filter(|n| !n.trim().is_empty())
+        .unwrap_or_else(|| fallback_name.into());
+    Ok(DockSpec {
+        name: sanitize_name(&name),
+        surface: opts.surface.unwrap_or_default(),
+        params,
+        randomize_seed: opts.randomize_seed,
+        complexes: opts.complexes.unwrap_or(10).min(100),
+    })
+}
+
+/// Parses the uploaded structures (and the native pair, which must come together).
+async fn check_dock_inputs(input: PathBuf) -> ApiResult<()> {
+    let res = tokio::task::spawn_blocking(move || -> Result<(), String> {
+        for (file, what) in [(INPUT_RECEPTOR, "receptor"), (INPUT_LIGAND, "ligand")] {
+            cs_core::io::pdb::Structure::read(&input.join(file))
+                .map_err(|e| format!("{what}: {e}"))?;
+        }
+        let (nr, nl) = (
+            input.join(INPUT_NATIVE_RECEPTOR),
+            input.join(INPUT_NATIVE_LIGAND),
+        );
+        match (nr.exists(), nl.exists()) {
+            (false, false) => Ok(()),
+            (true, true) => {
+                let read =
+                    |p: &FsPath| cs_core::io::pdb::Structure::read(p).map_err(|e| e.to_string());
+                let (r, l) = (
+                    read(&input.join(INPUT_RECEPTOR))?,
+                    read(&input.join(INPUT_LIGAND))?,
+                );
+                cs_core::eval::Native::new(&read(&nr)?, &read(&nl)?, &r, &l)
+                    .map(|_| ())
+                    .map_err(|e| format!("native complex: {e}"))
+            }
+            _ => Err("send both native_receptor and native_ligand, or neither".into()),
+        }
+    })
+    .await?;
+    res.map_err(ApiError::bad)
+}
+
+/// `multipart/form-data` with files `receptor` and `ligand` (PDB), optionally
+/// `native_receptor` + `native_ligand` (the bound complex, to score poses with CAPRI/DockQ),
+/// and text fields `name`, `surface` (`atoms` | `ses`), `params` (JSON), `randomize_seed`
+/// and `complexes`.
+async fn create_dock_job(
+    State(st): St,
+    mut form: Multipart,
+) -> ApiResult<(StatusCode, Json<super::db::Job>)> {
+    let id = uuid::Uuid::new_v4().to_string();
+    let dir = st.jobs.job_dir(&id);
+    let input = dir.join(INPUT_DIR);
+    tokio::fs::create_dir_all(&input).await?;
+    let result = async {
+        let mut opts = DockOptions::default();
+        let mut names: (Option<String>, Option<String>) = (None, None);
+        while let Some(mut field) = form
+            .next_field()
+            .await
+            .map_err(|e| ApiError::bad(e.to_string()))?
+        {
+            let field_name = field.name().unwrap_or_default().to_string();
+            let target = match field_name.as_str() {
+                "receptor" => Some(INPUT_RECEPTOR),
+                "ligand" => Some(INPUT_LIGAND),
+                "native_receptor" => Some(INPUT_NATIVE_RECEPTOR),
+                "native_ligand" => Some(INPUT_NATIVE_LIGAND),
+                _ => None,
+            };
+            if let Some(target) = target {
+                let stem = field.file_name().map(|f| {
+                    let f = f.rsplit(['/', '\\']).next().unwrap_or(f);
+                    f.rsplit_once('.').map_or(f, |(stem, _)| stem).to_string()
+                });
+                match field_name.as_str() {
+                    "receptor" => names.0 = stem,
+                    "ligand" => names.1 = stem,
+                    _ => {}
+                }
+                let path = input.join(target);
+                let mut file = tokio::fs::File::create(&path).await?;
+                let mut size = 0usize;
+                while let Some(chunk) = field
+                    .chunk()
+                    .await
+                    .map_err(|e| ApiError::bad(e.to_string()))?
+                {
+                    size += chunk.len();
+                    file.write_all(&chunk).await?;
+                }
+                file.flush().await?;
+                if size == 0 {
+                    tokio::fs::remove_file(&path).await?;
+                }
+                continue;
+            }
+            let text = field
+                .text()
+                .await
+                .map_err(|e| ApiError::bad(e.to_string()))?;
+            let text = text.trim().to_string();
+            if text.is_empty() {
+                continue;
+            }
+            match field_name.as_str() {
+                "name" => opts.name = Some(text),
+                "surface" => {
+                    opts.surface = Some(
+                        serde_json::from_value(serde_json::Value::String(text.clone()))
+                            .map_err(|_| ApiError::bad(format!("unknown surface {text:?}")))?,
+                    )
+                }
+                "params" => {
+                    opts.params = Some(
+                        serde_json::from_str(&text)
+                            .map_err(|e| ApiError::bad(format!("params: {e}")))?,
+                    )
+                }
+                "randomize_seed" => {
+                    opts.randomize_seed = Some(
+                        text.parse()
+                            .map_err(|_| ApiError::bad("randomize_seed must be an integer"))?,
+                    )
+                }
+                "complexes" => {
+                    opts.complexes = Some(
+                        text.parse()
+                            .map_err(|_| ApiError::bad("complexes must be an integer"))?,
+                    )
+                }
+                _ => {}
+            }
+        }
+        if !input.join(INPUT_RECEPTOR).exists() || !input.join(INPUT_LIGAND).exists() {
+            return Err(ApiError::bad(
+                "both the receptor and the ligand PDB files are required",
+            ));
+        }
+        let fallback = match names {
+            (Some(r), Some(l)) => format!("{r}+{l}"),
+            _ => "docking".into(),
+        };
+        let spec = build_dock_spec(opts, &fallback)?;
+        check_dock_inputs(input.clone()).await?;
+        st.jobs.submit(&id, &Task::Dock(spec))?;
+        Ok(())
+    }
+    .await;
+    if let Err(e) = result {
+        let _ = tokio::fs::remove_dir_all(&dir).await;
+        return Err(e);
+    }
+    let job = st.jobs.db.get(&id)?.ok_or_else(ApiError::not_found)?;
+    Ok((StatusCode::CREATED, Json(job)))
+}
+
+#[derive(Serialize)]
+struct Complex {
+    name: String,
+    has_native: bool,
+}
+
+/// A complex is a directory `<complexes>/<name>` with `<name>_r_u.pdb` and `<name>_l_u.pdb`,
+/// and optionally the bound pair `<name>_r_b.pdb` / `<name>_l_b.pdb` (Docking Benchmark naming).
+fn complex_files(
+    dir: &FsPath,
+    name: &str,
+) -> Option<(PathBuf, PathBuf, Option<(PathBuf, PathBuf)>)> {
+    if name.contains('/') || name.contains('\\') || name.starts_with('.') {
+        return None;
+    }
+    let d = dir.join(name);
+    let f = |s: &str| d.join(format!("{name}_{s}.pdb"));
+    let (ru, lu, rb, lb) = (f("r_u"), f("l_u"), f("r_b"), f("l_b"));
+    (ru.is_file() && lu.is_file())
+        .then(|| (ru, lu, (rb.is_file() && lb.is_file()).then_some((rb, lb))))
+}
+
+async fn list_complexes(State(st): St) -> ApiResult<Json<Vec<Complex>>> {
+    let mut out = Vec::new();
+    if let Ok(rd) = std::fs::read_dir(&st.complexes_dir) {
+        for e in rd.filter_map(|e| e.ok()) {
+            let name = e.file_name().to_string_lossy().into_owned();
+            if let Some((_, _, native)) = complex_files(&st.complexes_dir, &name) {
+                out.push(Complex {
+                    name,
+                    has_native: native.is_some(),
+                });
+            }
+        }
+    }
+    out.sort_by(|a, b| a.name.cmp(&b.name));
+    Ok(Json(out))
+}
+
+/// Docks a bundled complex. The unbound files of the Docking Benchmark are superposed on
+/// the complex, so the ligand starts from a random placement unless `randomize_seed` says
+/// otherwise; the bound pair, when present, scores the poses.
+async fn create_complex_dock_job(
+    State(st): St,
+    Path(name): Path<String>,
+    body: Option<Json<serde_json::Value>>,
+) -> ApiResult<(StatusCode, Json<super::db::Job>)> {
+    let (ru, lu, native) =
+        complex_files(&st.complexes_dir, &name).ok_or_else(ApiError::not_found)?;
+    let mut opts: DockOptions = match body {
+        Some(Json(v)) => serde_json::from_value(v).map_err(|e| ApiError::bad(e.to_string()))?,
+        None => DockOptions::default(),
+    };
+    // Same start as the benchmark harness (seed 1), so results match docs/DOCKING.md.
+    opts.randomize_seed = opts
+        .randomize_seed
+        .or(Some(cs_core::eval::bench::case_seed(1, &name)));
+    let spec = build_dock_spec(opts, &name)?;
+    let id = uuid::Uuid::new_v4().to_string();
+    let input = st.jobs.job_dir(&id).join(INPUT_DIR);
+    tokio::fs::create_dir_all(&input).await?;
+    tokio::fs::copy(&ru, input.join(INPUT_RECEPTOR)).await?;
+    tokio::fs::copy(&lu, input.join(INPUT_LIGAND)).await?;
+    if let Some((rb, lb)) = &native {
+        tokio::fs::copy(rb, input.join(INPUT_NATIVE_RECEPTOR)).await?;
+        tokio::fs::copy(lb, input.join(INPUT_NATIVE_LIGAND)).await?;
+    }
+    st.jobs.submit(&id, &Task::Dock(spec))?;
     let job = st.jobs.db.get(&id)?.ok_or_else(ApiError::not_found)?;
     Ok((StatusCode::CREATED, Json(job)))
 }

@@ -22,6 +22,7 @@ async fn app(data: &tempfile::TempDir, token: Option<&str>) -> Router {
         data_dir: data.path().to_path_buf(),
         web_dir: None,
         samples_dir: repo().join("data/samples"),
+        complexes_dir: repo().join("data/complexes"),
         token: token.map(str::to_string),
         workers: 1,
         max_upload_mb: 64,
@@ -401,4 +402,105 @@ async fn pdb_upload_generates_the_surface() {
         .map(|f| f["name"].as_str().unwrap())
         .collect();
     assert!(files.contains(&"tissue_factor.vert") && files.contains(&"tissue_factor.face"));
+}
+
+/// Fast docking settings: same pipeline, far fewer candidates (the full run takes ~10 s in
+/// release; tests run unoptimised).
+fn quick_dock_params() -> Value {
+    json!({
+        "descriptor": { "spacing": 4.0, "ring_radii": [2.0, 4.0, 6.0], "heights": [-2.0, 2.0],
+                        "tilt_angles": [], "tilt_azimuths": 1 },
+        "per_point": 5, "max_candidates": 800, "quick_top": 30, "refine_top": 8, "n_poses": 5
+    })
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn docking_job_end_to_end() {
+    let data = tempfile::tempdir().unwrap();
+    let app = app(&data, None).await;
+    let complexes = get_json(&app, "/api/complexes").await;
+    assert_eq!(complexes[0]["name"], "1AHW");
+    assert_eq!(complexes[0]["has_native"], true);
+
+    let (s, job) = post_json(
+        &app,
+        "/api/complexes/1AHW/dock",
+        json!({ "params": quick_dock_params(), "complexes": 2 }),
+    )
+    .await;
+    assert_eq!(s, StatusCode::CREATED, "{job}");
+    assert_eq!(job["mode"], "dock");
+    let id = job["id"].as_str().unwrap().to_string();
+    let job = wait_done(&app, &id).await;
+    let summary = &job["report"]["summary"];
+    assert_eq!(summary["kind"], "dock");
+    let poses = summary["poses"].as_array().unwrap();
+    assert!(!poses.is_empty() && poses.len() <= 5);
+    // Every pose is scored against the bound complex.
+    for p in poses {
+        assert!(p["metrics"]["dockq"].as_f64().unwrap() >= 0.0);
+        assert!(p["transform"]["rot"].is_array());
+    }
+    assert!(summary["native"]["pose"]["trans"].is_array());
+
+    let (s, blob) = get(&app, &format!("/api/jobs/{id}/files/dock_viewer.bin")).await;
+    assert_eq!(s, StatusCode::OK);
+    assert_eq!(&blob[..4], b"DCK1");
+    let files: Vec<&str> = job["report"]["files"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .map(|f| f["name"].as_str().unwrap())
+        .collect();
+    assert_eq!(files.iter().filter(|f| f.ends_with(".pdb")).count(), 2);
+    let (s, pdb) = get(&app, &format!("/api/jobs/{id}/files/1AHW_pose_001.pdb")).await;
+    assert_eq!(s, StatusCode::OK);
+    assert!(String::from_utf8_lossy(&pdb).contains("ATOM"));
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn docking_upload_validation() {
+    let data = tempfile::tempdir().unwrap();
+    let app = app(&data, None).await;
+    let dir = repo().join("data/complexes/1AHW");
+    let r = std::fs::read(dir.join("1AHW_r_u.pdb")).unwrap();
+    let rb = std::fs::read(dir.join("1AHW_r_b.pdb")).unwrap();
+    let upload = |parts: Vec<(&'static str, Option<&'static str>, Vec<u8>)>| {
+        let (ct, body) = multipart(&parts);
+        Request::post("/api/dock")
+            .header(header::CONTENT_TYPE, ct)
+            .body(Body::from(body))
+            .unwrap()
+    };
+    // Missing ligand.
+    let (s, _, _) = send(&app, upload(vec![("receptor", Some("r.pdb"), r.clone())])).await;
+    assert_eq!(s, StatusCode::BAD_REQUEST);
+    // Native receptor without native ligand.
+    let (s, _, _) = send(
+        &app,
+        upload(vec![
+            ("receptor", Some("r.pdb"), r.clone()),
+            ("ligand", Some("l.pdb"), r.clone()),
+            ("native_receptor", Some("rb.pdb"), rb),
+        ]),
+    )
+    .await;
+    assert_eq!(s, StatusCode::BAD_REQUEST);
+    // Unknown surface kind.
+    let (s, _, _) = send(
+        &app,
+        upload(vec![
+            ("receptor", Some("r.pdb"), r.clone()),
+            ("ligand", Some("l.pdb"), r),
+            ("surface", None, b"msms".to_vec()),
+        ]),
+    )
+    .await;
+    assert_eq!(s, StatusCode::BAD_REQUEST);
+    assert_eq!(
+        std::fs::read_dir(data.path().join("jobs"))
+            .map(|d| d.count())
+            .unwrap_or(0),
+        0
+    );
 }

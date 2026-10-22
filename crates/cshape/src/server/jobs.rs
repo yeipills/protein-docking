@@ -12,7 +12,9 @@ use serde::Serialize;
 use tokio::sync::{broadcast, mpsc};
 
 use super::db::{Db, Status};
-use crate::pipeline::{self, Inputs, Spec, SurfaceInput};
+use crate::docking::{self, DockFiles};
+use crate::pipeline::{self, Inputs, SurfaceInput};
+use crate::task::Task;
 
 #[derive(Debug, Clone, Serialize)]
 pub struct JobEvent {
@@ -42,6 +44,10 @@ pub const INPUT_VERT: &str = "surface.vert";
 pub const INPUT_FACE: &str = "surface.face";
 pub const INPUT_STL: &str = "surface.stl";
 pub const INPUT_PDB: &str = "structure.pdb";
+pub const INPUT_RECEPTOR: &str = "receptor.pdb";
+pub const INPUT_LIGAND: &str = "ligand.pdb";
+pub const INPUT_NATIVE_RECEPTOR: &str = "native_receptor.pdb";
+pub const INPUT_NATIVE_LIGAND: &str = "native_ligand.pdb";
 
 impl Jobs {
     /// Creates the manager and starts `workers` worker tasks. Jobs left unfinished by a
@@ -77,15 +83,9 @@ impl Jobs {
     }
 
     /// Registers a job whose input files are already in `job_dir(id)/input` and queues it.
-    pub fn submit(&self, id: &str, spec: &Spec) -> anyhow::Result<()> {
-        let spec_json = serde_json::to_value(spec)?;
-        let mode = serde_json::to_value(spec.mode)?;
-        self.db.insert(
-            id,
-            &spec.name,
-            mode.as_str().unwrap_or_default(),
-            &spec_json,
-        )?;
+    pub fn submit(&self, id: &str, task: &Task) -> anyhow::Result<()> {
+        let spec_json = serde_json::to_value(task)?;
+        self.db.insert(id, task.name(), &task.label(), &spec_json)?;
         self.enqueue(id);
         Ok(())
     }
@@ -211,7 +211,7 @@ impl Jobs {
             .db
             .get(id)?
             .ok_or_else(|| anyhow::anyhow!("job vanished"))?;
-        let spec: Spec = serde_json::from_value(job.spec.unwrap_or_default())?;
+        let task = Task::from_value(job.spec.unwrap_or_default())?;
         self.db.set_running(id)?;
         publish(JobEvent {
             status: Status::Running,
@@ -219,27 +219,13 @@ impl Jobs {
             stage: "starting".into(),
             error: None,
         });
-        tracing::info!(job = id, name = %spec.name, mode = ?spec.mode, "job started");
+        tracing::info!(job = id, name = task.name(), kind = %task.label(), "job started");
 
         let dir = self.job_dir(id);
         let jobs = self.clone();
         let id = id.to_string();
         tokio::task::spawn_blocking(move || {
             let input = dir.join(INPUT_DIR);
-            let stl = input.join(INPUT_STL);
-            let pdb = input.join(INPUT_PDB);
-            let surface = if pdb.exists() {
-                SurfaceInput::Pdb(pdb)
-            } else {
-                SurfaceInput::Msms {
-                    vert: input.join(INPUT_VERT),
-                    face: input.join(INPUT_FACE),
-                }
-            };
-            let inputs = Inputs {
-                surface,
-                stl: stl.exists().then_some(stl),
-            };
             let progress = JobProgress {
                 id: &id,
                 db: &jobs.db,
@@ -251,7 +237,38 @@ impl Jobs {
                     -1.0,
                 )),
             };
-            let report = pipeline::execute(&spec, &inputs, &dir.join(OUTPUT_DIR), &progress)?;
+            let out = dir.join(OUTPUT_DIR);
+            let report = match &task {
+                Task::Shapes(spec) => {
+                    let stl = input.join(INPUT_STL);
+                    let pdb = input.join(INPUT_PDB);
+                    let surface = if pdb.exists() {
+                        SurfaceInput::Pdb(pdb)
+                    } else {
+                        SurfaceInput::Msms {
+                            vert: input.join(INPUT_VERT),
+                            face: input.join(INPUT_FACE),
+                        }
+                    };
+                    let inputs = Inputs {
+                        surface,
+                        stl: stl.exists().then_some(stl),
+                    };
+                    pipeline::execute(spec, &inputs, &out, &progress)?
+                }
+                Task::Dock(spec) => {
+                    let (nr, nl) = (
+                        input.join(INPUT_NATIVE_RECEPTOR),
+                        input.join(INPUT_NATIVE_LIGAND),
+                    );
+                    let files = DockFiles {
+                        receptor: input.join(INPUT_RECEPTOR),
+                        ligand: input.join(INPUT_LIGAND),
+                        native: (nr.exists() && nl.exists()).then_some((nr, nl)),
+                    };
+                    docking::execute(spec, &files, &out, &progress)?
+                }
+            };
             Ok(serde_json::to_value(report)?)
         })
         .await?

@@ -19,6 +19,7 @@ pub struct ServeOptions {
     pub data_dir: PathBuf,
     pub web_dir: Option<PathBuf>,
     pub samples_dir: PathBuf,
+    pub complexes_dir: PathBuf,
     pub token: Option<String>,
     pub workers: usize,
     pub max_upload_mb: usize,
@@ -33,6 +34,7 @@ pub async fn build(opts: &ServeOptions) -> anyhow::Result<Router> {
         jobs,
         token: opts.token.clone().filter(|t| !t.is_empty()),
         samples_dir: opts.samples_dir.clone(),
+        complexes_dir: opts.complexes_dir.clone(),
     });
     let mut app = api::router(state, opts.max_upload_mb * 1024 * 1024);
     if let Some(web) = &opts.web_dir {
