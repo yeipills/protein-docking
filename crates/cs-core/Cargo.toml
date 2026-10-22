@@ -1,0 +1,16 @@
+[package]
+name = "cs-core"
+description = "Context-shape computation for protein surfaces (MSMS SES)"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+rust-version.workspace = true
+
+[dependencies]
+rayon.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+thiserror.workspace = true
+
+[dev-dependencies]
+sha2 = "0.11.0"

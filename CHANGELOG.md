@@ -1,4 +1,42 @@
-# Changelog - Protein Docking Platform
+# Changelog
+
+## [3.0.0] - 2026-10-22
+
+Reescritura completa. Los proyectos anteriores (scripts de la tesis, plataforma FastAPI +
+React + Celery, y las reescrituras `v2/` y `v2-gpu/`) se reemplazan por un único binario en
+Rust con cliente web.
+
+### Añadido
+- Núcleo `cs-core` en Rust con dos modos:
+  - **corregido**: índices MSMS correctos, rayos uniformes, distancia con signo exacta y
+    capas como bandas de distancia;
+  - **fiel**: reproduce byte a byte las 24 salidas de los scripts originales (validado con
+    hashes SHA-256 en las pruebas).
+- `cshape`: CLI (`run`, `compare`, `serve`, `health`) y servidor HTTP con cola de trabajos,
+  progreso por Server-Sent Events, SQLite, ZIP de resultados y token de acceso opcional.
+- Cliente web (React + three.js) con visor 3D de superficie, puntos críticos, rayos y capas.
+- Imagen Docker de un solo servicio, CI (Rust, web, Docker) y `tools/legacy-oracle`.
+
+- Superficie excluida al solvente generada desde PDB (`cs_core::surface`): campo de
+  distancia exacto y marching cubes sin ambigüedades; error medio 0,014 Å frente a MSMS.
+  Entrada `--pdb` en la CLI, la API y la web.
+- Docking rígido por formas de contexto complementarias (`cs_core::dock`): descriptores en
+  marco local con emparejamiento por bits (AVX2/AVX-512), puntuación por átomos, refinamiento
+  y agrupamiento. `cshape dock`, `POST /api/dock`, pestaña *Docking* en la web con visor del
+  complejo y tabla de poses.
+- Evaluación CAPRI/DockQ (`cs_core::eval`), idéntica a DockQ oficial en 99 poses de prueba,
+  y arnés del Docking Benchmark 5.5 (`cshape bench`, `tools/benchmark/`).
+
+### Rendimiento
+- `1AHW_l_u`: 141 s con los scripts originales → 0,3 s en modo fiel y 0,08 s en modo
+  corregido.
+- Docking: ~9 s por complejo de la categoría rígida; 43 % de los 162 casos con una pose
+  aceptable en el top 100 (20 % en el top 10).
+
+### Eliminado
+- Backend FastAPI, Celery, Redis, PostgreSQL, Socket.IO, nginx, Prometheus/Grafana y el
+  frontend React anterior.
+- `v2/` y `v2-gpu/`: no compilaban y su docking era simulado.
 
 ## [2.1.2] - 2025-11-14
 

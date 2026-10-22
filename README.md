@@ -1,715 +1,202 @@
-# Protein Docking Platform v2.1.0
-
-[![CI Pipeline](https://github.com/yeipills/protein-docking/workflows/CI%20Pipeline/badge.svg)](https://github.com/yeipills/protein-docking/actions)
-[![codecov](https://codecov.io/gh/yeipills/protein-docking/branch/main/graph/badge.svg)](https://codecov.io/gh/yeipills/protein-docking)
-[![Python 3.11](https://img.shields.io/badge/python-3.11-blue.svg)](https://www.python.org/downloads/)
-[![Node 20](https://img.shields.io/badge/node-20-green.svg)](https://nodejs.org/)
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
-
-> **Enterprise-grade protein docking analysis platform with multi-user support, real-time processing, advanced monitoring, and production-ready infrastructure**
-
-## Overview
-
-Protein Docking Platform is a web-based application designed to optimize protein docking algorithms for biomedical research. Version 2.1.0 builds on the enterprise foundation with production-grade enhancements:
-
-### Core Features
-- **Multi-user authentication and authorization** (JWT with rate limiting)
-- **Asynchronous task processing** (Celery + Redis with caching)
-- **Real-time notifications** (WebSocket)
-- **Scalable microservices architecture** (Docker + Kubernetes ready)
-- **Production-ready infrastructure** (Nginx, PostgreSQL with automated backups)
-- **Enhanced RESTful API** with comprehensive OpenAPI documentation
-
-### v2.1.0 Enhancements
-- ⚡ **Performance**: Redis caching layer for 10-50x query speedup
-- 📊 **Observability**: Prometheus metrics, structured logging, request tracing
-- 🔒 **Security**: Enhanced file validation, granular rate limiting
-- 💾 **Reliability**: Automated backups, health checks, error boundaries
-- 🔄 **Resilience**: Automatic retry logic, graceful degradation
-- 📝 **DevEx**: Enhanced API docs, better error messages, debugging tools
-
-### v2.2.0 Major Optimizations ⚡
-- 🔐 **Security Hardening**: XSS prevention, JWT httpOnly cookies, account lockout, strong password validation
-- 🚀 **Algorithm Performance**: **6-10x faster** processing (20-30 min → 2-5 min)
-  - KD-tree optimization: O(n²) → O(n log n)
-  - NumPy vectorization: **10-50x faster** centroids
-- 📊 **Database**: Composite indexes for **50-70% faster** queries
-- ⚛️ **Frontend**: React.memo optimization for **40-60% fewer** re-renders
-- 🌐 **Nginx**: Gzip compression (**40-60% smaller** responses), enhanced security headers
-- 📚 **Documentation**: Complete deployment guide, WebSocket protocol docs
-
-### v2.3.0 Final Performance ⚡ **LATEST!**
-- 🔥 **SPRINT 2 COMPLETED**: All performance optimizations done!
-- ⚡ **Cython Compilation**: **4-6x speedup** for layer calculations (504KB native .so)
-- 🚀 **Multiprocessing**: Parallelized layer evaluator for **3-5x speedup** on multi-core systems
-- 📈 **Total Performance Gain**: **10-15x faster** end-to-end (30-45 min → 3-6 min)
-  - Part One: 20-30 min → 2-5 min (**6-10x**)
-  - Part Two: 10-15 min → 30-60 sec (**12-30x**)
-- 💻 **Full CPU Utilization**: 20-30% → 80-95% (uses all cores)
-- 📊 **Scalability**: Performance scales with CPU cores (2-8+ cores supported)
-
-## Architecture
-
-```
-┌─────────────┐
-│   Nginx     │ ◄── Reverse Proxy, Load Balancing, SSL
-│  (Port 80)  │
-└──────┬──────┘
-       │
-       ├──────────► Frontend (React) ◄──┐
-       │                                 │
-       ├──────────► Backend API         │ WebSocket
-       │           (FastAPI)             │
-       │                                 │
-       └──────────► Socket Server  ◄────┘
-                    (Flask-SocketIO)
-
-       ┌────────────────┬──────────────┐
-       │                │              │
-   PostgreSQL        Redis        Celery Workers
-   (Database)       (Queue)      (Processing)
-```
-
-### Components
-
-1. **Frontend** - React 18 + TypeScript 5 + Vite 5 (Modern SPA)
-2. **Backend API** - FastAPI with SQLAlchemy ORM
-3. **Socket Server** - Flask-SocketIO for real-time updates
-4. **Celery Workers** - Distributed task processing
-5. **PostgreSQL** - Relational database
-6. **Redis** - Message broker and cache
-7. **Nginx** - Reverse proxy and load balancer
-
-## Features
-
-### 🔐 User Management
-- ✅ User registration and authentication
-- ✅ JWT token-based security
-- ✅ Role-based access control (user/admin)
-- ✅ User-specific data isolation
-
-### 🧬 Protein Processing
-- ✅ **Part One**: Upload STL, vertices, faces files → Generate context rays
-- ✅ **Part Two**: Upload CR files → Generate Unity visualization layers
-- ✅ Asynchronous processing with progress tracking
-- ✅ Real-time job status notifications
-- ✅ Per-user job queuing with concurrency limits
-
-### 🚀 API Features (v2.1.0 Enhanced)
-- ✅ RESTful API design
-- ✅ **Enhanced OpenAPI/Swagger documentation** with examples and detailed descriptions
-- ✅ **Granular rate limiting** per endpoint type (auth: 5/min, uploads: 10/min, jobs: 20/hr)
-- ✅ **Request tracing** with unique X-Request-ID headers
-- ✅ **Structured logging** with contextvars for full request lifecycle tracking
-- ✅ File upload validation with magic bytes checking
-- ✅ Comprehensive error handling
-- ✅ Automatic retry logic with exponential backoff
-
-### 📊 Monitoring & Observability
-- ✅ **Prometheus metrics** - Application and system metrics
-- ✅ **Health checks** - Kubernetes-compatible liveness/readiness/startup probes
-- ✅ **Structured logging** - JSON logs with request tracing
-- ✅ Request/response duration tracking
-- ✅ Error rate monitoring
-
-### 💾 Data Management
-- ✅ **Automated database backups** with rotation
-- ✅ **Point-in-time restore** capabilities
-- ✅ Backup verification and integrity checks
-- ✅ Cron job automation for scheduled backups
-
-### 🔒 Security & Reliability
-- ✅ **Enhanced file validation** - Magic bytes, MIME type verification
-- ✅ Path traversal protection
-- ✅ Malicious file detection (executables, scripts, archives)
-- ✅ **Frontend error boundaries** - Graceful error handling
-- ✅ **Automatic retry logic** - Network resilience
-- ✅ CORS configuration
-- ✅ Security headers
-
-### ⚡ Performance
-- ✅ **Redis caching layer** - 10-50x faster repeated queries
-- ✅ Database connection pooling
-- ✅ Distributed task processing
-- ✅ Code splitting and lazy loading (frontend)
-- ✅ Compression (gzip/brotli)
-
-### 📈 Scalability
-- ✅ Horizontal scaling support
-- ✅ Designed for 100-1000+ concurrent users
-- ✅ Microservices architecture
-- ✅ Stateless API design
-- ✅ Container orchestration ready (Kubernetes)
-
-## Quick Start
-
-### Prerequisites
-
-- Docker >= 20.10
-- Docker Compose >= 2.0
-- Git
-
-### Development Setup
-
-1. **Clone the repository**
-```bash
-git clone https://github.com/yeipills/protein-docking.git
-cd protein-docking
-```
-
-2. **Create environment file**
-```bash
-cp .env.example .env
-# Edit .env with your configuration
-```
-
-3. **Start development environment**
-
-**Option A - Using script (recommended):**
-```bash
-./scripts/dev-start.sh
-```
-
-**Option B - Manual:**
-```bash
-docker-compose -f docker-compose.dev.yml up --build
-```
-
-4. **Access the application**
-- Frontend: http://localhost:3000
-- Backend API: http://localhost:5000
-- API Docs: http://localhost:5000/docs
-- Socket Server: http://localhost:8080
-
-### Production Deployment
-
-1. **Configure environment variables**
-```bash
-cp .env.example .env
-# Edit .env with production values:
-# - Set strong passwords (NEVER use defaults)
-# - Configure JWT secrets (minimum 64 characters)
-# - Set ENVIRONMENT=production
-# - Set ALLOWED_ORIGINS to your domain
-# - Configure VITE_API_URL and VITE_SOCKET_URL with your domain
-```
-
-2. **Deploy to production**
-
-**Option A - Using deployment script (recommended):**
-```bash
-./scripts/deploy-production.sh
-```
-
-**Option B - Manual:**
-```bash
-docker-compose up -d --build
-```
-
-3. **Access the application**
-- Application: http://your-domain
-- API: http://your-domain/api/v1
-
-4. **View logs**
-```bash
-docker-compose logs -f
-```
-
-5. **Scale services**
-```bash
-# Scale Celery workers for higher throughput
-docker-compose up -d --scale celery_worker=4
-
-# Scale backend API for more concurrent requests
-docker-compose up -d --scale backend=3
-```
-
-## API Documentation
-
-### Authentication
-
-#### Register
-```bash
-POST /api/v1/auth/register
-Content-Type: application/json
-
-{
-  "email": "user@example.com",
-  "username": "username",
-  "full_name": "Full Name",
-  "password": "secure_password"
-}
-```
-
-#### Login
-```bash
-POST /api/v1/auth/login
-Content-Type: application/json
-
-{
-  "username": "username",
-  "password": "secure_password"
-}
-
-Response:
-{
-  "access_token": "eyJ...",
-  "refresh_token": "eyJ...",
-  "token_type": "bearer"
-}
-```
-
-### Protein Processing
-
-#### Upload Part One
-```bash
-POST /api/v1/proteins/upload/part-one
-Authorization: Bearer <access_token>
-Content-Type: multipart/form-data
-
-protein_name: "MyProtein"
-stl_file: <file>
-vertices_file: <file>
-faces_file: <file>
-
-Response:
-{
-  "id": 1,
-  "job_type": "part_one",
-  "status": "processing",
-  "progress": 0
-}
-```
-
-#### Check Job Status
-```bash
-GET /api/v1/jobs/1
-Authorization: Bearer <access_token>
-
-Response:
-{
-  "id": 1,
-  "status": "completed",
-  "progress": 100,
-  "output_files": [
-    "/results/protein_CRtotales.txt",
-    "/results/protein_rayos_contexto.txt"
-  ]
-}
-```
-
-### Complete API Documentation
-Visit `/docs` (development) for interactive Swagger UI with all endpoints.
-
-## Technology Stack
-
-### Backend
-- **Python 3.11**
-- **FastAPI** - Modern async web framework
-- **SQLAlchemy** - ORM for database operations
-- **Celery** - Distributed task queue
-- **Flask-SocketIO** - WebSocket server
-- **PostgreSQL** - Primary database
-- **Redis** - Message broker and cache
-- **Pydantic** - Data validation
-- **JWT** - Authentication
-- **Uvicorn** - ASGI server
-
-### Scientific Computing
-- **NumPy 2.1** - Numerical computing
-- **SciPy 1.14** - Scientific computing
-- **Trimesh 4.5** - 3D mesh processing
-- **Cython 3.0** - Performance optimization (4-6x speedup)
-
-### Frontend (Production-Ready)
-- **React 18.3** - UI library with modern hooks
-- **TypeScript 5.6** - Type safety and developer experience
-- **Vite 5.4** - Lightning-fast build tool with HMR
-- **TanStack Query** - Data fetching and caching
-- **Zustand** - Lightweight state management
-- **Tailwind CSS** - Utility-first styling
-- **Socket.IO Client** - Real-time WebSocket updates
-- **Axios** - HTTP client with interceptors
-- **Lucide React** - Modern icon library
-
-### Infrastructure
-- **Docker** - Containerization
-- **Docker Compose** - Orchestration
-- **Nginx** - Reverse proxy & load balancer
-- **Alpine Linux** - Minimal container images
-
-## Project Structure
-
-```
-protein-docking/
-├── backend/
-│   ├── app/
-│   │   ├── api/              # API endpoints
-│   │   │   ├── auth.py       # Authentication
-│   │   │   ├── users.py      # User management
-│   │   │   ├── jobs.py       # Job management
-│   │   │   └── proteins.py   # Protein operations
-│   │   ├── models/           # Database models
-│   │   │   ├── user.py
-│   │   │   ├── job.py
-│   │   │   └── protein.py
-│   │   ├── schemas/          # Pydantic schemas
-│   │   ├── core/             # Core utilities
-│   │   │   ├── security.py   # JWT, passwords
-│   │   │   ├── logging.py    # Centralized logging
-│   │   │   └── exceptions.py # Custom exceptions
-│   │   ├── tasks/            # Celery tasks
-│   │   ├── algorithms/       # Scientific algorithms
-│   │   │   ├── surface_reader.py
-│   │   │   ├── centroid_calculator.py
-│   │   │   ├── context_rays.py
-│   │   │   ├── layer_evaluator.py
-│   │   │   └── unity_exporter.py
-│   │   ├── config.py         # Configuration
-│   │   ├── database.py       # DB connection
-│   │   ├── dependencies.py   # FastAPI dependencies
-│   │   └── main.py           # FastAPI app
-│   ├── socket_server/        # WebSocket server
-│   │   └── app.py
-│   ├── requirements.txt
-│   └── Dockerfile
-├── frontend/                 # React + TypeScript + Vite SPA
-│   ├── src/
-│   │   ├── components/       # UI components
-│   │   ├── pages/           # Application pages
-│   │   ├── hooks/           # Custom React hooks
-│   │   ├── services/        # API & WebSocket clients
-│   │   ├── store/           # Zustand state management
-│   │   ├── types/           # TypeScript definitions
-│   │   └── utils/           # Helper functions
-│   ├── package.json
-│   ├── vite.config.ts
-│   ├── tsconfig.json
-│   └── Dockerfile
-├── nginx/                    # Nginx configuration
-│   ├── nginx.conf
-│   └── Dockerfile
-├── scripts/                  # Utility scripts
-│   ├── dev-start.sh         # Start development environment
-│   ├── deploy-production.sh # Production deployment
-│   ├── backup-db.sh         # Database backup
-│   ├── run-tests.sh         # Test suite runner
-│   └── README.md            # Scripts documentation
-├── docker/
-├── docs/
-├── docker-compose.yml        # Production
-├── docker-compose.dev.yml    # Development
-├── .env.example              # Environment template
-├── .gitignore
-└── README.md
-```
-
-## Configuration
-
-### Environment Variables
-
-See `.env.example` for all available configuration options. Key variables:
+# cshape — formas de contexto y docking de proteínas
+
+`cshape` calcula las **formas de contexto** (*context shapes*) de la superficie excluida al
+solvente (SES) de una proteína, a partir de un archivo PDB (la superficie se genera
+internamente, ver [docs/SURFACE.md](docs/SURFACE.md)) o de los archivos `.vert` / `.face` de MSMS.
+
+Para cada **punto crítico** de la superficie se lanza una esfera de rayos; cada muestra de
+cada rayo se clasifica en diez capas: la superficie (`ses`), cuatro capas interiores
+(`in1`–`in4`), cuatro exteriores (`out1`–`out4`) y el volumen (`vol`). El resultado se puede
+explorar en un visor 3D en el navegador y descargar en el formato de texto que usa el visor
+de Unity.
+
+Sobre esas formas, `cshape` también hace **docking rígido proteína–proteína**: busca
+parches de superficie complementarios entre un receptor y un ligando, puntúa las poses con
+los átomos y, si se conoce el complejo real, las califica con los criterios estándar
+**CAPRI y DockQ** (validados contra la implementación oficial).
+
+Todo es un único binario en Rust (núcleo de cálculo, servidor HTTP y CLI) más un cliente web
+estático.
+
+| Documento | Contenido |
+|---|---|
+| [docs/ALGORITHM.md](docs/ALGORITHM.md) | Formas de contexto, defectos del original y validación |
+| [docs/SURFACE.md](docs/SURFACE.md) | Generador de superficie excluida al solvente desde PDB |
+| [docs/DOCKING.md](docs/DOCKING.md) | Motor de docking, parámetros y resultados |
+| [docs/EVALUATION.md](docs/EVALUATION.md) | CAPRI/DockQ y benchmark Docking Benchmark 5.5 |
+
+## Dos modos de cálculo
+
+| | **Corregido** (por defecto) | **Fiel al original** |
+|---|---|---|
+| Objetivo | Geometría correcta | Mismos números que los scripts de la tesis |
+| Entrada | `.vert` + `.face` | `.vert` + `.face` + `.stl` |
+| Índices MSMS | 1-based, correctos | usados como 0-based (centroides desplazados) |
+| Rayos | Fibonacci, uniformes, configurables | `phi, theta ∈ linspace(0, 2π, 10)`: 100 rayos, muchos repetidos |
+| Dentro / fuera | distancia con signo exacta a la malla SES | `intersects_any` de trimesh con la posición absoluta como dirección |
+| Capas | bandas de distancia a la superficie | desplazamientos radiales desde el origen de coordenadas |
+| Puntos críticos | separados al menos `min_spacing` Å | solo se descartan los 100 vecinos más cercanos |
+| Validación | pruebas geométricas contra fuerza bruta | **idéntico byte a byte** a los 24 archivos de los scripts originales |
+
+El modo fiel existe para comparar y justificar el cambio. Los defectos que reproduce están
+descritos en [docs/ALGORITHM.md](docs/ALGORITHM.md).
+
+## Rendimiento
+
+Proteína de ejemplo `1AHW_l_u` (11.141 vértices, 22.290 caras), 4 núcleos:
+
+| | Tiempo de cálculo |
+|---|---|
+| Scripts originales en Python (Script03 + 04 + 05)¹ | 141 s |
+| `cshape`, modo fiel (mismos resultados) | 0,3 s |
+| `cshape`, modo corregido (valores por defecto) | 0,08 s |
+| `cshape`, modo corregido con 2.092 formas × 200 rayos × 32 muestras (13,4 M distancias exactas) | 3,8 s |
+
+¹ Con Script04 ya optimizado (búsquedas por diccionario en vez de recorrer listas completas);
+tal como estaba escrito tardaba del orden de una hora.
+
+## Docking
+
+Docking Benchmark 5.5, categoría rígida completa (162 complejos), ligando en posición
+aleatoria, % de casos con al menos una pose de la calidad indicada (aceptable / media / alta):
+
+| | Top 1 | Top 10 | Top 100 | Tiempo medio |
+|---|---|---|---|---|
+| `cshape` (superficie de átomos) | 4 / 2 / 0 | 20 / 8 / 1 | 43 / 15 / 1 | 9,3 s |
+| Poses al azar (referencia) | 0 / 0 / 0 | — | 3 / 0 / 0 | — |
+| Techo rígido (mejor colocación posible) | 100 / 99 / 69 | | | |
+
+Es una línea base clásica de complementariedad de forma: rápida y bien medida, pero lejos
+de los métodos actuales. El mayor margen de mejora está en la puntuación (las poses casi
+nativas suelen generarse pero no quedan arriba). Los detalles y limitaciones, en
+[docs/DOCKING.md](docs/DOCKING.md).
 
 ```bash
-# Environment
-ENVIRONMENT=development|production
-
-# Database
-POSTGRES_USER=protein_user
-POSTGRES_PASSWORD=<strong_password>
-POSTGRES_DB=protein_docking
-
-# JWT
-JWT_SECRET_KEY=<64+_character_secret>
-JWT_ACCESS_TOKEN_EXPIRE_MINUTES=60
-
-# Rate Limiting
-MAX_CONCURRENT_JOBS_PER_USER=3
-RATE_LIMIT_PER_MINUTE=60
-
-# File Limits
-MAX_FILE_SIZE_MB=100
-PROCESSING_TIMEOUT_SECONDS=3600
-
-# Frontend
-VITE_API_URL=http://localhost:5000/api/v1
-VITE_SOCKET_URL=http://localhost:8080
-VITE_ENV=development
+make dock     # acopla 1AHW (Fab + factor tisular) y califica cada pose contra el cristal
+make bench    # descarga el benchmark y corre la categoría rígida (~25 min)
 ```
 
-## Monitoring and Logging
+## Inicio rápido
 
-### View Logs
+### Docker
+
 ```bash
-# All services
-docker-compose logs -f
-
-# Specific service
-docker-compose logs -f backend
-docker-compose logs -f celery_worker
-
-# Last 100 lines
-docker-compose logs --tail=100 backend
+docker compose up --build
+# http://localhost:8080
 ```
 
-### Health Checks
+Para exigir un token de acceso: `CSHAPE_TOKEN=un-secreto docker compose up`.
+
+### Desde el código
+
+Requiere Rust ≥ 1.85 y Node ≥ 20.
+
 ```bash
-# Backend API
-curl http://localhost:5000/health
-
-# Socket Server
-curl http://localhost:8080/health
-
-# Database
-docker-compose exec postgres pg_isready
+make build                        # cliente web + binario release
+./target/release/cshape serve     # http://localhost:8080
 ```
 
-### Performance Monitoring
+En desarrollo, `make dev` levanta el servidor y Vite (`http://localhost:5173`, con proxy a la API).
 
-Logs are structured in JSON format for easy parsing with tools like:
-- **ELK Stack** (Elasticsearch, Logstash, Kibana)
-- **Grafana** + Prometheus
-- **Datadog**, **New Relic**, **Sentry**
+### Línea de comandos
 
-## Security
-
-### Implemented
-- ✅ JWT authentication
-- ✅ Password hashing (bcrypt)
-- ✅ SQL injection protection (SQLAlchemy ORM)
-- ✅ CORS configuration
-- ✅ Rate limiting
-- ✅ File upload validation
-- ✅ Input sanitization (Pydantic)
-- ✅ Security headers (Nginx)
-
-### Production Recommendations
-- [ ] Enable HTTPS/SSL with Let's Encrypt
-- [ ] Configure firewall rules
-- [ ] Set up regular database backups
-- [ ] Implement audit logging
-- [ ] Add intrusion detection
-- [ ] Regular security updates
-
-## Scaling Guide
-
-### Horizontal Scaling
-
-**Backend API:**
 ```bash
-docker-compose up -d --scale backend=3
+cshape run --pdb prot.pdb --out resultados/                          # genera la SES
+cshape run --pdb prot.pdb --surface ses.json --out resultados/       # {"probe": 1.4, "grid_spacing": 0.5, ...}
+cshape run --vert prot.vert --face prot.face --out resultados/
+cshape run --mode legacy --vert prot.vert --face prot.face --stl prot.stl --out legacy/
+cshape run --vert prot.vert --face prot.face --params params.json   # parámetros propios
+cshape compare dirA/ dirB/        # compara línea a línea los .txt comunes
+
+# Docking: poses ordenadas, PDB de los mejores complejos y, con el complejo real, CAPRI/DockQ
+cshape dock --receptor rec.pdb --ligand lig.pdb --out dock/
+cshape dock --receptor rec_u.pdb --ligand lig_u.pdb \
+    --native-receptor rec_b.pdb --native-ligand lig_b.pdb --randomize-seed 1 --out dock/
+cshape bench --category rigid --limit 20 --out bench/   # Docking Benchmark 5.5
 ```
 
-**Celery Workers:**
+## Parámetros (modo corregido)
+
+| Parámetro | Defecto | Descripción |
+|---|---|---|
+| `min_spacing` | `10.0` Å | Distancia mínima entre puntos críticos |
+| `radius` | `3.0` Å | Largo de cada rayo (radio de la forma) |
+| `rays` | `100` | Rayos por forma |
+| `samples` | `32` | Muestras por rayo |
+| `layer_edges` | `[-1, -0.8, -0.4, -0.2, 0, 0.2, 0.4, 0.8, 1]` Å | Bordes de `in4 … in1 \| out1 … out4` |
+| `ses_half_width` | media separación entre muestras | Media anchura de la banda `ses` |
+| `skip_face_types` | `[1]` | Tipos de cara MSMS que no aportan puntos de superficie |
+
+Con `min_spacing` = 10 Å resultan menos formas que en el modo fiel (49 frente a 160 en el
+ejemplo), porque el original solo descartaba los 100 vecinos más cercanos y en zonas densas
+quedaban puntos a menos de 10 Å. Para una densidad parecida, use unos 6 Å.
+
+## Archivos de salida
+
+| Archivo | Contenido |
+|---|---|
+| `<nombre>_cs_<capa>_unity.txt` (×10) | Una línea por rayo: `forma rayo v₁ … vₙ cx cy cz ex ey ez` |
+| `<nombre>_resumen_cs_unity.txt` | Centro de cada forma |
+| `summary.json` | Conteos, ocupación por capa, parámetros y tiempos |
+| `viewer.bin` | Malla y formas para el visor web (formato en `crates/cs-core/src/export.rs`) |
+| *(entrada PDB)* `<nombre>.vert`, `<nombre>.face` | Superficie generada, en formato MSMS |
+| *(modo fiel)* `centroidesPCS.txt`, `<nombre>_rayos_contexto.txt`, `<nombre>_cr_totales.txt` | Salidas de Script02 y Script03 |
+| *(modo fiel, opcional)* `<nombre>_<capa>.txt` (×10) | Archivos intermedios de Script04 |
+| *(docking)* `poses.json` | Poses ordenadas: transformación del ligando, puntaje, componentes y, si hay complejo real, métricas CAPRI/DockQ |
+| *(docking)* `<nombre>_pose_NNN.pdb` | Complejo receptor + ligando acoplado de las mejores poses |
+| *(docking)* `dock_viewer.bin` | Superficies del receptor y del ligando para el visor |
+
+## API
+
+| Método y ruta | |
+|---|---|
+| `GET /api/health` | Estado (sin autenticación) |
+| `GET /api/config` | Versión y parámetros por defecto |
+| `GET /api/jobs` · `POST /api/jobs` | Listar · crear (multipart: `pdb` **o** `vert` + `face`, `stl?`, `name?`, `mode?`, `params?` JSON, `surface?` JSON, `legacy_intermediate?`) |
+| `GET /api/jobs/{id}` · `DELETE /api/jobs/{id}` | Detalle con resumen · borrar |
+| `POST /api/jobs/{id}/cancel` | Cancelar |
+| `GET /api/jobs/{id}/events` | Progreso en vivo (Server-Sent Events) |
+| `GET /api/jobs/{id}/files/{archivo}` · `GET /api/jobs/{id}/archive` | Un archivo · todo en ZIP |
+| `GET /api/samples` · `POST /api/samples/{nombre}/jobs` | Muestras incluidas · calcular una |
+| `POST /api/dock` | Docking (multipart: `receptor`, `ligand`, `native_receptor?` + `native_ligand?`, `surface?` = `atoms`\|`ses`, `params?` JSON, `randomize_seed?`, `complexes?`, `name?`) |
+| `GET /api/complexes` · `POST /api/complexes/{nombre}/dock` | Complejos incluidos · acoplar uno (con evaluación si trae el complejo unido) |
+
+Con `CSHAPE_TOKEN` definido, todas las rutas salvo `/api/health` exigen
+`Authorization: Bearer <token>` (o `?token=` para descargas y EventSource).
+
+Configuración del servidor (variables de entorno o banderas de `cshape serve --help`):
+`CSHAPE_ADDR`, `CSHAPE_DATA`, `CSHAPE_WEB`, `CSHAPE_SAMPLES`, `CSHAPE_COMPLEXES`, `CSHAPE_TOKEN`,
+`CSHAPE_WORKERS`, `CSHAPE_MAX_UPLOAD_MB`.
+
+## Estructura del repositorio
+
+```
+crates/cs-core/   núcleo: PDB/MSMS/STL, superficie SES, formas de contexto, docking, evaluación
+crates/cshape/    binario: CLI (run, dock, bench, compare, serve, health) y servidor HTTP
+web/              cliente React + three.js
+data/samples/     proteína de ejemplo 1AHW_l_u (.vert, .face, .stl)
+data/complexes/   complejo 1AHW del Docking Benchmark (receptor y ligando, libres y unidos)
+tools/legacy-oracle/  vuelve a ejecutar los scripts originales para regenerar la referencia
+tools/benchmark/  descarga del Docking Benchmark 5.5 y tabla de casos
+docs/             algoritmo, superficie, docking y evaluación
+```
+
+## Pruebas
+
 ```bash
-docker-compose up -d --scale celery_worker=5
+make test     # Rust (incluye la comparación con los scripts originales) + web
+make check    # rustfmt, clippy, tipos de TypeScript
+make oracle   # vuelve a correr los scripts Python originales y compara (≈3 min)
+make dock     # docking de 1AHW con evaluación CAPRI/DockQ (~12 s)
 ```
 
-**With Nginx load balancing**, requests are distributed across instances.
+## Historia
 
-### Database Optimization
-- Enable connection pooling (configured)
-- Add read replicas for heavy read workloads
-- Implement caching with Redis
-- Regular VACUUM and ANALYZE operations
+Este repositorio reúne tres intentos anteriores, que siguen disponibles en el historial de git:
+los scripts originales de la tesis (eliminados en `4b5d28d`), la plataforma FastAPI + React +
+Celery (v2.x, hasta `b99602a`) y dos reescrituras en Rust/Svelte que no compilaban y cuyo
+docking era simulado (`514f7d4`). La versión 3 reemplaza a todos.
 
-### Handling 1000+ Users
-1. **Scale workers**: 10+ Celery workers
-2. **Scale API**: 5+ backend instances
-3. **Database**: Upgrade to larger instance or cluster
-4. **Redis**: Redis Cluster for high availability
-5. **CDN**: Serve static assets via CDN
-6. **Monitoring**: Implement comprehensive monitoring
+## Licencia
 
-## Utility Scripts
-
-The project includes several utility scripts for common operations:
-
-### 🔧 Development Environment
-```bash
-./scripts/dev-start.sh
-```
-Starts all services in development mode with hot-reload, runs migrations, and displays useful URLs.
-
-### 💾 Database Backup
-```bash
-./scripts/backup-db.sh
-```
-Creates timestamped compressed backups. Automatically cleans up old backups (>7 days).
-
-### 🚀 Production Deployment
-```bash
-./scripts/deploy-production.sh
-```
-Deploys to production with pre-flight checks:
-- Validates environment configuration
-- Checks for default passwords
-- Creates database backup
-- Runs health checks after deployment
-
-### 🧪 Run Tests
-```bash
-./scripts/run-tests.sh           # All tests
-./scripts/run-tests.sh backend   # Backend only
-./scripts/run-tests.sh frontend  # Frontend only
-./scripts/run-tests.sh lint      # Linting only
-```
-
-See [scripts/README.md](scripts/README.md) for detailed documentation.
-
----
-
-## Development
-
-### Running Tests
-```bash
-# Run all tests with coverage
-./scripts/run-tests.sh
-
-# Backend tests only
-docker-compose -f docker-compose.dev.yml exec backend pytest tests/ -v --cov=app
-```
-
-### Code Quality
-```bash
-# Backend
-docker-compose exec backend flake8 app/ --max-line-length=100
-docker-compose exec backend mypy app/ --ignore-missing-imports
-
-# Frontend
-cd frontend
-npm run lint
-npm run format
-```
-
-### Database Migrations
-```bash
-# Create new migration
-docker-compose exec backend alembic revision --autogenerate -m "description"
-
-# Apply migrations
-docker-compose exec backend alembic upgrade head
-
-# View migration history
-docker-compose exec backend alembic history
-```
-
-## Platform Status
-
-### ✅ 100% Complete - Production Ready
-- ✅ Modern microservices architecture
-- ✅ User authentication system (JWT)
-- ✅ Job management with real-time updates
-- ✅ Database models and schemas
-- ✅ 15+ REST API endpoints
-- ✅ Docker deployment (dev + prod)
-- ✅ WebSocket server with auth
-- ✅ Celery task queue fully integrated
-- ✅ Nginx reverse proxy with load balancing
-- ✅ **All 5 scientific algorithms migrated** (1,414 lines)
-- ✅ **Cython optimization compiled** (4-6x speedup)
-- ✅ **Modern frontend** (React + TypeScript + Vite)
-- ✅ **40 security vulnerabilities fixed**
-- ✅ Comprehensive documentation
-
-### Frontend Features (v2.1)
-- ✅ 18 UI components (Button, Input, Card, Badge, Progress, FileUpload, etc.)
-- ✅ 5 complete pages (Landing, Login, Register, Dashboard, Upload)
-- ✅ Type-safe API integration with auto-refresh JWT
-- ✅ Real-time job updates via WebSocket
-- ✅ Responsive design with Tailwind CSS
-- ✅ Custom hooks for auth, jobs, proteins
-- ✅ Toast notifications and error handling
-- ✅ Production-optimized build
-
-### Optional Enhancements
-1. **Testing Suite**
-   - Unit tests for algorithms
-   - Integration tests for API
-   - E2E tests for workflows
-
-2. **SSL/HTTPS**
-   - Let's Encrypt integration
-   - HTTPS redirect configuration
-
-3. **Advanced Monitoring**
-   - Prometheus metrics
-   - Grafana dashboards
-   - Sentry error tracking
-
-## Troubleshooting
-
-### Common Issues
-
-**Database connection error:**
-```bash
-# Check if PostgreSQL is running
-docker-compose ps postgres
-
-# View logs
-docker-compose logs postgres
-
-# Restart database
-docker-compose restart postgres
-```
-
-**Celery worker not processing:**
-```bash
-# Check worker status
-docker-compose logs celery_worker
-
-# Restart worker
-docker-compose restart celery_worker
-
-# Check Redis connection
-docker-compose exec redis redis-cli ping
-```
-
-**Frontend can't connect to API:**
-- Check CORS settings in `.env`
-- Verify `VITE_API_URL` and `VITE_SOCKET_URL` in `.env`
-- Ensure all services are running (backend, socket, frontend)
-- Check browser console for CORS errors
-
-## Documentation
-
-### Core Documentation
-- **[README.md](README.md)** - This file, project overview and quick start
-- **[DEPLOYMENT.md](DEPLOYMENT.md)** - Production deployment guide with security checklist
-- **[SECURITY.md](SECURITY.md)** - Security architecture, threat model, and best practices
-- **[TESTING.md](TESTING.md)** - Comprehensive testing guide (pytest, Vitest, Playwright)
-- **[WEBSOCKET.md](WEBSOCKET.md)** - WebSocket protocol and real-time communication guide
-- **[PERFORMANCE_IMPROVEMENTS.md](PERFORMANCE_IMPROVEMENTS.md)** - v2.3.0 performance optimizations (Cython + Parallelization)
-- **[OPTIMIZATION_SUMMARY.md](OPTIMIZATION_SUMMARY.md)** - v2.2.0 optimizations summary
-- **[PENDING_TASKS.md](PENDING_TASKS.md)** - Remaining work and roadmap
-
-### Additional Resources
-- **[scripts/README.md](scripts/README.md)** - Utility scripts documentation
-- **[API Documentation](http://localhost:5000/docs)** - Interactive Swagger UI (when running)
-
-## Contributing
-
-1. Fork the repository
-2. Create a feature branch
-3. Make your changes
-4. Write/update tests
-5. Submit a pull request
-
-## License
-
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
-
-## Contact
-
-For questions or support, please open an issue on GitHub.
-
----
-
-**Version:** 2.3.0
-**Last Updated:** 2025-11-15
-**Status:** ✅ Production-Ready - SPRINT 2 COMPLETE! 🎉
-**Performance:** 10-15x faster end-to-end (30-45 min → 3-6 min)
-**Frontend:** React 18 + TypeScript 5 + Vite 5 (Optimized with React.memo)
-**Backend:** FastAPI + Celery + PostgreSQL + Redis (Cython + Multiprocessing)
-**Algorithms:** Fully Optimized - Cython Compiled (4-6x) + Parallelized (3-5x)
-**Security:** XSS Prevention, JWT httpOnly Cookies, Account Lockout, Strong Passwords
+MIT — ver [LICENSE](LICENSE).

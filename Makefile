@@ -1,233 +1,63 @@
-# Makefile for Protein Docking Platform
-# Convenient shortcuts for common development tasks
+.PHONY: help build web server dev test check fmt sample dock benchmark-data bench docker oracle
 
-.PHONY: help dev build test lint format clean install setup
-
-# Default target
 help:
-	@echo "🧬 Protein Docking Platform - Development Commands"
-	@echo ""
-	@echo "Setup & Installation:"
-	@echo "  make install          Install all dependencies (backend + frontend)"
-	@echo "  make setup            Complete setup (install + migrate + create dirs)"
-	@echo ""
-	@echo "Development:"
-	@echo "  make dev              Start development environment (all services)"
-	@echo "  make dev-stop         Stop development environment"
-	@echo "  make dev-backend      Start only backend services"
-	@echo "  make dev-frontend     Start only frontend dev server"
-	@echo ""
-	@echo "Building:"
-	@echo "  make build            Build Docker images for production"
-	@echo "  make build-dev        Build Docker images for development"
-	@echo ""
-	@echo "Database:"
-	@echo "  make migrate          Run database migrations"
-	@echo "  make migration        Create new migration (MSG='description')"
-	@echo "  make db-shell         Open PostgreSQL shell"
-	@echo "  make backup           Create database backup"
-	@echo ""
-	@echo "Testing & Quality:"
-	@echo "  make test             Run all tests"
-	@echo "  make test-backend     Run backend tests only"
-	@echo "  make test-frontend    Run frontend tests only"
-	@echo "  make lint             Run linters (backend + frontend)"
-	@echo "  make lint-fix         Run linters with auto-fix"
-	@echo "  make format           Format code (black + prettier)"
-	@echo "  make type-check       Run type checking (mypy + tsc)"
-	@echo ""
-	@echo "Docker Operations:"
-	@echo "  make up               Start all services (production mode)"
-	@echo "  make down             Stop all services"
-	@echo "  make restart          Restart all services"
-	@echo "  make logs             Tail all logs"
-	@echo "  make ps               Show running containers"
-	@echo ""
-	@echo "Cleaning:"
-	@echo "  make clean            Remove build artifacts and cache"
-	@echo "  make clean-all        Deep clean (including Docker volumes)"
-	@echo ""
-	@echo "Deployment:"
-	@echo "  make deploy           Deploy to production (with checks)"
-	@echo "  make health-check     Check service health"
+	@echo "make build    Build the web client and the release binary"
+	@echo "make dev      Run the server (port 8080) and the Vite dev server (port 5173)"
+	@echo "make test     Run Rust and web tests"
+	@echo "make check    Formatting, lints and type checks"
+	@echo "make sample   Compute the bundled sample in both modes into ./out"
+	@echo "make dock     Dock the bundled 1AHW complex and score it against the crystal structure"
+	@echo "make bench    Docking Benchmark 5.5, rigid category (downloads it first; ~25 min)"
+	@echo "make docker   Build the Docker image"
+	@echo "make oracle   Re-run the original Python scripts and compare (needs Python 3)"
 
-# ================================
-# Setup & Installation
-# ================================
+build: web server
 
-install:
-	@echo "📦 Installing backend dependencies..."
-	cd backend && pip install -r requirements.txt
-	@echo "📦 Installing frontend dependencies..."
-	cd frontend && npm install
-	@echo "✅ All dependencies installed"
+web:
+	cd web && npm ci && npm run build
 
-setup: install
-	@echo "🔧 Creating directories..."
-	mkdir -p backend/uploads backend/results backend/logs
-	mkdir -p backups
-	@echo "🗄️  Running database migrations..."
-	make migrate
-	@echo "✅ Setup complete!"
-
-# ================================
-# Development
-# ================================
+server:
+	cargo build --release -p cshape
 
 dev:
-	@echo "🚀 Starting development environment..."
-	./scripts/dev-start.sh
-
-dev-stop:
-	@echo "⏹️  Stopping development environment..."
-	./scripts/dev-stop.sh
-
-dev-backend:
-	@echo "🐍 Starting backend services..."
-	docker-compose -f docker-compose.dev.yml up postgres redis backend celery_worker socket
-
-dev-frontend:
-	@echo "⚛️  Starting frontend dev server..."
-	cd frontend && npm run dev
-
-# ================================
-# Building
-# ================================
-
-build:
-	@echo "🏗️  Building production images..."
-	docker-compose build --no-cache
-
-build-dev:
-	@echo "🏗️  Building development images..."
-	docker-compose -f docker-compose.dev.yml build
-
-# ================================
-# Database
-# ================================
-
-migrate:
-	@echo "🗄️  Running database migrations..."
-	docker-compose exec -T backend alembic upgrade head || \
-	docker-compose -f docker-compose.dev.yml exec -T backend alembic upgrade head
-
-migration:
-	@echo "📝 Creating new migration: $(MSG)"
-	docker-compose exec backend alembic revision --autogenerate -m "$(MSG)"
-
-db-shell:
-	@echo "🗄️  Opening PostgreSQL shell..."
-	docker-compose exec postgres psql -U protein_user -d protein_docking
-
-backup:
-	@echo "💾 Creating database backup..."
-	./scripts/backup-db.sh
-
-# ================================
-# Testing & Quality
-# ================================
+	cargo build --release -p cshape
+	./target/release/cshape serve & cd web && npm run dev
 
 test:
-	@echo "🧪 Running all tests..."
-	./scripts/run-tests.sh
+	cargo test --workspace
+	cd web && npm test
 
-test-backend:
-	@echo "🐍 Running backend tests..."
-	./scripts/run-tests.sh backend
+check:
+	cargo fmt --all --check
+	cargo clippy --workspace --all-targets -- -D warnings
+	cd web && npm run typecheck
 
-test-frontend:
-	@echo "⚛️  Running frontend tests..."
-	./scripts/run-tests.sh frontend
+fmt:
+	cargo fmt --all
 
-lint:
-	@echo "🔍 Running linters..."
-	@echo "Backend..."
-	docker-compose exec backend flake8 app/ --max-line-length=100
-	@echo "Frontend..."
-	cd frontend && npm run lint
+sample: server
+	./target/release/cshape run --vert data/samples/1AHW_l_u/1AHW_l_u.vert \
+		--face data/samples/1AHW_l_u/1AHW_l_u.face --out out/corrected
+	./target/release/cshape run --mode legacy --vert data/samples/1AHW_l_u/1AHW_l_u.vert \
+		--face data/samples/1AHW_l_u/1AHW_l_u.face --stl data/samples/1AHW_l_u/1AHW_l_u.stl \
+		--intermediate --out out/legacy
 
-lint-fix:
-	@echo "🔧 Running linters with auto-fix..."
-	@echo "Backend..."
-	docker-compose exec backend black app/
-	docker-compose exec backend isort app/
-	@echo "Frontend..."
-	cd frontend && npm run lint:fix
+dock: server
+	./target/release/cshape dock --receptor data/complexes/1AHW/1AHW_r_u.pdb \
+		--ligand data/complexes/1AHW/1AHW_l_u.pdb \
+		--native-receptor data/complexes/1AHW/1AHW_r_b.pdb \
+		--native-ligand data/complexes/1AHW/1AHW_l_b.pdb \
+		--randomize-seed 10142002940977943103 --out out/dock-1AHW
 
-format:
-	@echo "✨ Formatting code..."
-	@echo "Backend (black + isort)..."
-	cd backend && black app/ && isort app/
-	@echo "Frontend (prettier)..."
-	cd frontend && npm run format
-	@echo "✅ Code formatted"
+benchmark-data:
+	test -d data/benchmark/benchmark5.5 || tools/benchmark/fetch.sh
 
-type-check:
-	@echo "📝 Type checking..."
-	@echo "Backend (mypy)..."
-	cd backend && mypy app/ --ignore-missing-imports
-	@echo "Frontend (tsc)..."
-	cd frontend && npm run type-check
-	@echo "✅ Type check complete"
+bench: server benchmark-data
+	./target/release/cshape bench --category rigid --out out/bench-rigid
 
-# ================================
-# Docker Operations
-# ================================
+docker:
+	docker build -t cshape:3 .
 
-up:
-	@echo "⬆️  Starting all services..."
-	docker-compose up -d
-
-down:
-	@echo "⬇️  Stopping all services..."
-	docker-compose down
-
-restart:
-	@echo "🔄 Restarting all services..."
-	docker-compose restart
-
-logs:
-	@echo "📋 Tailing logs..."
-	docker-compose logs -f
-
-ps:
-	@echo "📊 Container status:"
-	docker-compose ps
-
-# ================================
-# Cleaning
-# ================================
-
-clean:
-	@echo "🧹 Cleaning build artifacts..."
-	find . -type d -name "__pycache__" -exec rm -rf {} + 2>/dev/null || true
-	find . -type d -name ".pytest_cache" -exec rm -rf {} + 2>/dev/null || true
-	find . -type d -name ".mypy_cache" -exec rm -rf {} + 2>/dev/null || true
-	find . -type d -name "*.egg-info" -exec rm -rf {} + 2>/dev/null || true
-	rm -rf frontend/dist frontend/node_modules/.vite
-	@echo "✅ Cleaned"
-
-clean-all: clean down
-	@echo "🧹 Deep cleaning (including Docker volumes)..."
-	docker-compose down -v
-	docker system prune -f
-	@echo "⚠️  All data removed!"
-
-# ================================
-# Deployment
-# ================================
-
-deploy:
-	@echo "🚀 Deploying to production..."
-	./scripts/deploy-production.sh
-
-health-check:
-	@echo "🏥 Checking service health..."
-	@echo "Backend API:"
-	@curl -f http://localhost/api/v1/health || echo "❌ Backend unhealthy"
-	@echo "\nNginx:"
-	@curl -f http://localhost/health || echo "❌ Nginx unhealthy"
-	@echo "\nPostgreSQL:"
-	@docker-compose exec postgres pg_isready -U protein_user || echo "❌ Database unhealthy"
-	@echo "\nRedis:"
-	@docker-compose exec redis redis-cli ping || echo "❌ Redis unhealthy"
+oracle: sample
+	tools/legacy-oracle/run.sh out/oracle
+	./target/release/cshape compare out/oracle out/legacy
