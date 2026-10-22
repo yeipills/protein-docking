@@ -1,6 +1,7 @@
 pub mod bvh;
 pub mod grid;
 pub mod sdf;
+pub mod transform;
 pub mod vec3;
 
 /// `n` nearly uniform unit directions on the sphere (Fibonacci lattice).

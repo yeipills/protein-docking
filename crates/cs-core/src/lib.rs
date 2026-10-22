@@ -13,6 +13,7 @@ pub mod export;
 pub mod geom;
 pub mod io;
 pub mod legacy;
+pub mod mesh;
 pub mod model;
 pub mod progress;
 

@@ -1,4 +1,5 @@
-//! End-to-end checks on the 1AHW_l_u sample (MSMS surface of an antibody light chain).
+//! End-to-end checks on the 1AHW_l_u sample (MSMS surface of tissue factor, the ligand of
+//! complex 1AHW in the Protein-Protein Docking Benchmark).
 //!
 //! `legacy_oracle.sha256` holds the hashes of the files written by the original Python
 //! scripts (Script02-05, run unmodified apart from file paths) on the same input.
