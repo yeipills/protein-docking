@@ -1,0 +1,6 @@
+target
+var
+out
+web/node_modules
+web/dist
+.git

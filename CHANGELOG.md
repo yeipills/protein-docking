@@ -1,4 +1,30 @@
-# Changelog - Protein Docking Platform
+# Changelog
+
+## [3.0.0] - 2026-10-22
+
+Reescritura completa. Los proyectos anteriores (scripts de la tesis, plataforma FastAPI +
+React + Celery, y las reescrituras `v2/` y `v2-gpu/`) se reemplazan por un único binario en
+Rust con cliente web.
+
+### Añadido
+- Núcleo `cs-core` en Rust con dos modos:
+  - **corregido**: índices MSMS correctos, rayos uniformes, distancia con signo exacta y
+    capas como bandas de distancia;
+  - **fiel**: reproduce byte a byte las 24 salidas de los scripts originales (validado con
+    hashes SHA-256 en las pruebas).
+- `cshape`: CLI (`run`, `compare`, `serve`, `health`) y servidor HTTP con cola de trabajos,
+  progreso por Server-Sent Events, SQLite, ZIP de resultados y token de acceso opcional.
+- Cliente web (React + three.js) con visor 3D de superficie, puntos críticos, rayos y capas.
+- Imagen Docker de un solo servicio, CI (Rust, web, Docker) y `tools/legacy-oracle`.
+
+### Rendimiento
+- `1AHW_l_u`: 141 s con los scripts originales → 0,3 s en modo fiel y 0,08 s en modo
+  corregido.
+
+### Eliminado
+- Backend FastAPI, Celery, Redis, PostgreSQL, Socket.IO, nginx, Prometheus/Grafana y el
+  frontend React anterior.
+- `v2/` y `v2-gpu/`: no compilaban y su docking era simulado.
 
 ## [2.1.2] - 2025-11-14
 

@@ -45,6 +45,11 @@ enum Command {
     },
     /// Compare the text files two output directories have in common, line by line.
     Compare { a: PathBuf, b: PathBuf },
+    /// Exit 0 if a local server answers /api/health (used by the Docker health check).
+    Health {
+        #[arg(long, env = "CSHAPE_ADDR", default_value = "127.0.0.1:8080")]
+        addr: std::net::SocketAddr,
+    },
     /// Run the web server (API + web client).
     Serve {
         #[arg(long, env = "CSHAPE_ADDR", default_value = "0.0.0.0:8080")]
@@ -134,6 +139,7 @@ fn main() -> anyhow::Result<()> {
             Ok(())
         }
         Command::Compare { a, b } => compare(&a, &b),
+        Command::Health { addr } => health(addr),
         Command::Serve {
             addr,
             data,
@@ -211,5 +217,26 @@ fn trunc(s: &str) -> String {
         format!("{}…", &s[..160])
     } else {
         s.to_string()
+    }
+}
+
+fn health(mut addr: std::net::SocketAddr) -> anyhow::Result<()> {
+    use std::io::{Read, Write};
+    if addr.ip().is_unspecified() {
+        addr.set_ip(std::net::Ipv4Addr::LOCALHOST.into());
+    }
+    let timeout = std::time::Duration::from_secs(2);
+    let mut stream = std::net::TcpStream::connect_timeout(&addr, timeout)?;
+    stream.set_read_timeout(Some(timeout))?;
+    write!(
+        stream,
+        "GET /api/health HTTP/1.1\r\nHost: {addr}\r\nConnection: close\r\n\r\n"
+    )?;
+    let mut buf = String::new();
+    stream.read_to_string(&mut buf)?;
+    if buf.starts_with("HTTP/1.1 200") {
+        Ok(())
+    } else {
+        anyhow::bail!("unhealthy: {}", buf.lines().next().unwrap_or("no response"))
     }
 }
