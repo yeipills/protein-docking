@@ -20,11 +20,17 @@ enum Command {
     /// Compute context shapes from an MSMS surface and write the result files.
     Run {
         /// MSMS vertex file (.vert)
-        #[arg(long)]
-        vert: PathBuf,
+        #[arg(long, required_unless_present = "pdb", requires = "face")]
+        vert: Option<PathBuf>,
         /// MSMS face file (.face)
+        #[arg(long, requires = "vert")]
+        face: Option<PathBuf>,
+        /// PDB file: the solvent-excluded surface is generated (instead of --vert/--face)
+        #[arg(long, conflicts_with_all = ["vert", "face"])]
+        pdb: Option<PathBuf>,
+        /// JSON file with surface parameters for --pdb (probe, grid_spacing, radii, ...)
         #[arg(long)]
-        face: PathBuf,
+        surface: Option<PathBuf>,
         /// Surface STL (required in legacy mode)
         #[arg(long)]
         stl: Option<PathBuf>,
@@ -97,6 +103,8 @@ fn main() -> anyhow::Result<()> {
         Command::Run {
             vert,
             face,
+            pdb,
+            surface,
             stl,
             mode,
             name,
@@ -110,8 +118,26 @@ fn main() -> anyhow::Result<()> {
                 )?,
                 None => Params::default(),
             };
+            let surface_params = match surface {
+                Some(p) => serde_json::from_slice(
+                    &std::fs::read(&p).with_context(|| p.display().to_string())?,
+                )?,
+                None => Default::default(),
+            };
+            let (input, stem_from) = match (pdb, vert, face) {
+                (Some(pdb), _, _) => (pipeline::SurfaceInput::Pdb(pdb.clone()), pdb),
+                (None, Some(vert), Some(face)) => (
+                    pipeline::SurfaceInput::Msms {
+                        vert: vert.clone(),
+                        face,
+                    },
+                    vert,
+                ),
+                _ => anyhow::bail!("give either --pdb or both --vert and --face"),
+            };
             let name = name.unwrap_or_else(|| {
-                vert.file_stem()
+                stem_from
+                    .file_stem()
                     .map(|s| s.to_string_lossy().into_owned())
                     .unwrap_or_default()
             });
@@ -123,10 +149,14 @@ fn main() -> anyhow::Result<()> {
                 },
                 params,
                 legacy_intermediate: intermediate,
+                surface: surface_params,
             };
             let t = Instant::now();
-            let report =
-                pipeline::execute(&spec, &pipeline::Inputs { vert, face, stl }, &out, &Stderr)?;
+            let inputs = pipeline::Inputs {
+                surface: input,
+                stl,
+            };
+            let report = pipeline::execute(&spec, &inputs, &out, &Stderr)?;
             println!("{}", serde_json::to_string_pretty(&report.summary)?);
             eprintln!(
                 "read {} ms, compute {} ms, write {} ms, total {:.2} s -> {}",

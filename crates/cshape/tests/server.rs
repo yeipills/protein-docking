@@ -353,3 +353,52 @@ async fn cancel_queued_job() {
     // Cancelled jobs keep no outputs.
     assert!(!data.path().join("jobs").join(first).join("output").exists());
 }
+
+#[tokio::test(flavor = "multi_thread")]
+async fn pdb_upload_generates_the_surface() {
+    let data = tempfile::tempdir().unwrap();
+    let app = app(&data, None).await;
+    let pdb = std::fs::read(repo().join("data/complexes/1AHW/1AHW_l_u.pdb")).unwrap();
+    let upload = |parts: Vec<(&'static str, Option<&'static str>, Vec<u8>)>| {
+        let (ct, body) = multipart(&parts);
+        Request::post("/api/jobs")
+            .header(header::CONTENT_TYPE, ct)
+            .body(Body::from(body))
+            .unwrap()
+    };
+
+    // Legacy mode cannot start from atoms.
+    let (s, _, _) = send(
+        &app,
+        upload(vec![
+            ("pdb", Some("tf.pdb"), pdb.clone()),
+            ("mode", None, b"legacy".to_vec()),
+        ]),
+    )
+    .await;
+    assert_eq!(s, StatusCode::BAD_REQUEST);
+
+    let (s, b, _) = send(
+        &app,
+        upload(vec![
+            ("pdb", Some("tissue_factor.pdb"), pdb),
+            ("surface", None, br#"{"grid_spacing": 0.7}"#.to_vec()),
+        ]),
+    )
+    .await;
+    assert_eq!(s, StatusCode::CREATED, "{}", String::from_utf8_lossy(&b));
+    let job: Value = serde_json::from_slice(&b).unwrap();
+    assert_eq!(job["name"], "tissue_factor");
+    let job = wait_done(&app, job["id"].as_str().unwrap()).await;
+    let summary = &job["report"]["summary"];
+    assert_eq!(summary["input"]["atoms"], 1622);
+    assert_eq!(summary["surface"]["grid_spacing"], 0.7);
+    assert!(summary["context_shapes"].as_u64().unwrap() > 0);
+    let files: Vec<&str> = job["report"]["files"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .map(|f| f["name"].as_str().unwrap())
+        .collect();
+    assert!(files.contains(&"tissue_factor.vert") && files.contains(&"tissue_factor.face"));
+}

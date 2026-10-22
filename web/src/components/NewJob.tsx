@@ -8,6 +8,7 @@ interface Props {
 }
 
 interface Files {
+  pdb?: File
   vert?: File
   face?: File
   stl?: File
@@ -17,7 +18,8 @@ function assign(files: FileList | File[], prev: Files): Files {
   const next = { ...prev }
   for (const f of Array.from(files)) {
     const ext = f.name.toLowerCase().split('.').pop()
-    if (ext === 'vert') next.vert = f
+    if (ext === 'pdb' || ext === 'ent') next.pdb = f
+    else if (ext === 'vert') next.vert = f
     else if (ext === 'face') next.face = f
     else if (ext === 'stl') next.stl = f
   }
@@ -54,7 +56,10 @@ export function NewJob({ defaults, samples, onCreated }: Props) {
     return { ...params, layer_edges: parsed }
   }
 
-  const ready = files.vert && files.face && (mode === 'corrected' || files.stl)
+  // A PDB is enough in corrected mode (the surface is generated); legacy needs the MSMS
+  // files and the STL used by the original scripts.
+  const usePdb = mode === 'corrected' && !!files.pdb && !(files.vert && files.face)
+  const ready = usePdb || (files.vert && files.face && (mode === 'corrected' || files.stl))
 
   async function submit(e: React.FormEvent) {
     e.preventDefault()
@@ -63,8 +68,12 @@ export function NewJob({ defaults, samples, onCreated }: Props) {
     setError(null)
     try {
       const form = new FormData()
-      form.set('vert', files.vert!)
-      form.set('face', files.face!)
+      if (usePdb) {
+        form.set('pdb', files.pdb!)
+      } else {
+        form.set('vert', files.vert!)
+        form.set('face', files.face!)
+      }
       if (mode === 'legacy' && files.stl) form.set('stl', files.stl)
       form.set('mode', mode)
       if (name.trim()) form.set('name', name.trim())
@@ -131,7 +140,7 @@ export function NewJob({ defaults, samples, onCreated }: Props) {
       </div>
       <p className="note">
         {mode === 'corrected'
-          ? 'Distancias exactas a la superficie, rayos uniformes e índices MSMS correctos.'
+          ? 'Distancias exactas a la superficie, rayos uniformes e índices MSMS correctos. Acepta PDB.'
           : 'Reproduce byte a byte los scripts originales, incluidos sus errores. Requiere el STL.'}
       </p>
 
@@ -156,15 +165,18 @@ export function NewJob({ defaults, samples, onCreated }: Props) {
           ref={input}
           type="file"
           multiple
-          accept=".vert,.face,.stl"
+          accept=".pdb,.ent,.vert,.face,.stl"
           hidden
           onChange={(e) => e.target.files && setFiles((f) => assign(e.target.files!, f))}
         />
-        <strong>Suelta aquí los archivos MSMS</strong>
+        <strong>{mode === 'corrected' ? 'Suelta aquí un PDB o los archivos MSMS' : 'Suelta aquí los archivos MSMS'}</strong>
         <span>o haz clic para elegirlos</span>
         <ul className="file-slots mono">
-          <FileSlot ext=".vert" file={files.vert} />
-          <FileSlot ext=".face" file={files.face} />
+          {mode === 'corrected' && (
+            <FileSlot ext=".pdb" file={files.pdb} optional={!!(files.vert && files.face)} hint="o .vert + .face" />
+          )}
+          <FileSlot ext=".vert" file={files.vert} optional={usePdb} />
+          <FileSlot ext=".face" file={files.face} optional={usePdb} />
           <FileSlot ext=".stl" file={files.stl} optional={mode === 'corrected'} />
         </ul>
       </div>
@@ -173,7 +185,7 @@ export function NewJob({ defaults, samples, onCreated }: Props) {
         <span>Nombre</span>
         <input
           type="text"
-          placeholder={files.vert?.name.replace(/\.vert$/i, '') ?? 'proteína'}
+          placeholder={(usePdb ? files.pdb?.name : files.vert?.name)?.replace(/\.[^.]+$/, '') ?? 'proteína'}
           value={name}
           onChange={(e) => setName(e.target.value)}
         />
@@ -266,11 +278,11 @@ export function NewJob({ defaults, samples, onCreated }: Props) {
   )
 }
 
-function FileSlot({ ext, file, optional }: { ext: string; file?: File; optional?: boolean }) {
+function FileSlot({ ext, file, optional, hint }: { ext: string; file?: File; optional?: boolean; hint?: string }) {
   return (
     <li className={file ? 'ok' : optional ? 'opt' : ''}>
       <b>{ext}</b>
-      <span>{file ? file.name : optional ? 'opcional' : 'falta'}</span>
+      <span>{file ? file.name : optional ? 'opcional' : hint ?? 'falta'}</span>
     </li>
   )
 }

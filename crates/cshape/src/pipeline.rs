@@ -6,8 +6,10 @@ use std::time::Instant;
 use anyhow::{Context, bail};
 use cs_core::corrected::{self, Params};
 use cs_core::io::msms::MsmsSurface;
+use cs_core::io::pdb::Structure;
 use cs_core::io::stl::Stl;
 use cs_core::progress::Progress;
+use cs_core::surface::{self, SesParams};
 use cs_core::{Layer, Mode, export, legacy};
 use serde::{Deserialize, Serialize};
 
@@ -21,11 +23,21 @@ pub struct Spec {
     /// Legacy mode: also write Script04's ten per-cell intermediate files (large).
     #[serde(default)]
     pub legacy_intermediate: bool,
+    /// Surface generation parameters, used when the input is a PDB file.
+    #[serde(default)]
+    pub surface: SesParams,
+}
+
+/// Where the molecular surface comes from.
+pub enum SurfaceInput {
+    /// Precomputed MSMS `.vert` / `.face` files.
+    Msms { vert: PathBuf, face: PathBuf },
+    /// Atoms; the SES is generated with [`Spec::surface`].
+    Pdb(PathBuf),
 }
 
 pub struct Inputs {
-    pub vert: PathBuf,
-    pub face: PathBuf,
+    pub surface: SurfaceInput,
     pub stl: Option<PathBuf>,
 }
 
@@ -93,7 +105,32 @@ pub fn execute(
     };
 
     let t = Instant::now();
-    let surface = MsmsSurface::read(&inputs.vert, &inputs.face)?;
+    let mut atom_count = None;
+    let surface = match &inputs.surface {
+        SurfaceInput::Msms { vert, face } => MsmsSurface::read(vert, face)?,
+        SurfaceInput::Pdb(path) => {
+            if spec.mode == Mode::Legacy {
+                bail!(
+                    "legacy mode reproduces the original scripts, which need MSMS files and an STL; use the corrected mode for PDB input"
+                );
+            }
+            spec.surface.validate()?;
+            let structure = Structure::read(path)?;
+            atom_count = Some(structure.atoms.len());
+            let mesh = surface::ses(&structure.atoms, &spec.surface, progress)?;
+            write(
+                format!("{name}.vert"),
+                "surface",
+                mesh.write_msms_vert().as_bytes(),
+            )?;
+            write(
+                format!("{name}.face"),
+                "surface",
+                mesh.write_msms_face().as_bytes(),
+            )?;
+            mesh.to_msms()
+        }
+    };
     let stl = match (&spec.mode, &inputs.stl) {
         (Mode::Legacy, Some(p)) => Some(Stl::read(p)?),
         (Mode::Legacy, None) => {
@@ -167,7 +204,11 @@ pub fn execute(
     summary["input"] = serde_json::json!({
         "vertices": surface.vertices.len(),
         "faces": surface.faces_raw.len(),
+        "atoms": atom_count,
     });
+    if atom_count.is_some() {
+        summary["surface"] = serde_json::to_value(&spec.surface)?;
+    }
     timings.write = t.elapsed().as_millis() as u64;
 
     let report = Report {
