@@ -122,8 +122,8 @@ function Intro() {
       <ol className="steps">
         <li>
           <span>
-          <b>Sube</b> los archivos <code>.vert</code> y <code>.face</code> de MSMS (y el <code>.stl</code> si usas el modo
-          fiel).
+          <b>Sube</b> un <code>.pdb</code> (la superficie se genera sola) o los archivos <code>.vert</code> y{' '}
+          <code>.face</code> de MSMS (más el <code>.stl</code> si usas el modo fiel).
           </span>
         </li>
         <li>

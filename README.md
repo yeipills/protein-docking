@@ -1,7 +1,8 @@
 # cshape — formas de contexto de superficies proteicas
 
 `cshape` calcula las **formas de contexto** (*context shapes*) de la superficie excluida al
-solvente (SES) de una proteína, a partir de los archivos `.vert` / `.face` de MSMS.
+solvente (SES) de una proteína, a partir de un archivo PDB (la superficie se genera
+internamente, ver [docs/SURFACE.md](docs/SURFACE.md)) o de los archivos `.vert` / `.face` de MSMS.
 
 Para cada **punto crítico** de la superficie se lanza una esfera de rayos; cada muestra de
 cada rayo se clasifica en diez capas: la superficie (`ses`), cuatro capas interiores
@@ -67,6 +68,8 @@ En desarrollo, `make dev` levanta el servidor y Vite (`http://localhost:5173`, c
 ### Línea de comandos
 
 ```bash
+cshape run --pdb prot.pdb --out resultados/                          # genera la SES
+cshape run --pdb prot.pdb --surface ses.json --out resultados/       # {"probe": 1.4, "grid_spacing": 0.5, ...}
 cshape run --vert prot.vert --face prot.face --out resultados/
 cshape run --mode legacy --vert prot.vert --face prot.face --stl prot.stl --out legacy/
 cshape run --vert prot.vert --face prot.face --params params.json   # parámetros propios
@@ -97,6 +100,7 @@ quedaban puntos a menos de 10 Å. Para una densidad parecida, use unos 6 Å.
 | `<nombre>_resumen_cs_unity.txt` | Centro de cada forma |
 | `summary.json` | Conteos, ocupación por capa, parámetros y tiempos |
 | `viewer.bin` | Malla y formas para el visor web (formato en `crates/cs-core/src/export.rs`) |
+| *(entrada PDB)* `<nombre>.vert`, `<nombre>.face` | Superficie generada, en formato MSMS |
 | *(modo fiel)* `centroidesPCS.txt`, `<nombre>_rayos_contexto.txt`, `<nombre>_cr_totales.txt` | Salidas de Script02 y Script03 |
 | *(modo fiel, opcional)* `<nombre>_<capa>.txt` (×10) | Archivos intermedios de Script04 |
 
@@ -106,7 +110,7 @@ quedaban puntos a menos de 10 Å. Para una densidad parecida, use unos 6 Å.
 |---|---|
 | `GET /api/health` | Estado (sin autenticación) |
 | `GET /api/config` | Versión y parámetros por defecto |
-| `GET /api/jobs` · `POST /api/jobs` | Listar · crear (multipart: `vert`, `face`, `stl?`, `name?`, `mode?`, `params?` JSON, `legacy_intermediate?`) |
+| `GET /api/jobs` · `POST /api/jobs` | Listar · crear (multipart: `pdb` **o** `vert` + `face`, `stl?`, `name?`, `mode?`, `params?` JSON, `surface?` JSON, `legacy_intermediate?`) |
 | `GET /api/jobs/{id}` · `DELETE /api/jobs/{id}` | Detalle con resumen · borrar |
 | `POST /api/jobs/{id}/cancel` | Cancelar |
 | `GET /api/jobs/{id}/events` | Progreso en vivo (Server-Sent Events) |

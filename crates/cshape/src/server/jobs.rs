@@ -12,7 +12,7 @@ use serde::Serialize;
 use tokio::sync::{broadcast, mpsc};
 
 use super::db::{Db, Status};
-use crate::pipeline::{self, Inputs, Spec};
+use crate::pipeline::{self, Inputs, Spec, SurfaceInput};
 
 #[derive(Debug, Clone, Serialize)]
 pub struct JobEvent {
@@ -41,6 +41,7 @@ pub const OUTPUT_DIR: &str = "output";
 pub const INPUT_VERT: &str = "surface.vert";
 pub const INPUT_FACE: &str = "surface.face";
 pub const INPUT_STL: &str = "surface.stl";
+pub const INPUT_PDB: &str = "structure.pdb";
 
 impl Jobs {
     /// Creates the manager and starts `workers` worker tasks. Jobs left unfinished by a
@@ -226,9 +227,17 @@ impl Jobs {
         tokio::task::spawn_blocking(move || {
             let input = dir.join(INPUT_DIR);
             let stl = input.join(INPUT_STL);
+            let pdb = input.join(INPUT_PDB);
+            let surface = if pdb.exists() {
+                SurfaceInput::Pdb(pdb)
+            } else {
+                SurfaceInput::Msms {
+                    vert: input.join(INPUT_VERT),
+                    face: input.join(INPUT_FACE),
+                }
+            };
             let inputs = Inputs {
-                vert: input.join(INPUT_VERT),
-                face: input.join(INPUT_FACE),
+                surface,
                 stl: stl.exists().then_some(stl),
             };
             let progress = JobProgress {

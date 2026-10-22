@@ -23,7 +23,7 @@ use tower::ServiceExt;
 use tower_http::services::ServeFile;
 
 use super::db::Status;
-use super::jobs::{INPUT_DIR, INPUT_FACE, INPUT_STL, INPUT_VERT, Jobs, OUTPUT_DIR};
+use super::jobs::{INPUT_DIR, INPUT_FACE, INPUT_PDB, INPUT_STL, INPUT_VERT, Jobs, OUTPUT_DIR};
 use crate::pipeline::{Spec, sanitize_name};
 
 pub struct AppState {
@@ -349,6 +349,7 @@ struct Options {
     params: Option<Params>,
     #[serde(default)]
     legacy_intermediate: bool,
+    surface: Option<cs_core::surface::SesParams>,
 }
 
 fn build_spec(opts: Options, fallback_name: &str) -> ApiResult<Spec> {
@@ -356,6 +357,10 @@ fn build_spec(opts: Options, fallback_name: &str) -> ApiResult<Spec> {
     params
         .validate()
         .map_err(|e| ApiError::bad(e.to_string()))?;
+    let surface = opts.surface.unwrap_or_default();
+    surface
+        .validate()
+        .map_err(|e| ApiError::bad(format!("surface: {e}")))?;
     let name = opts
         .name
         .filter(|n| !n.trim().is_empty())
@@ -365,13 +370,25 @@ fn build_spec(opts: Options, fallback_name: &str) -> ApiResult<Spec> {
         mode: opts.mode.unwrap_or(Mode::Corrected),
         params,
         legacy_intermediate: opts.legacy_intermediate,
+        surface,
     })
 }
 
-/// Parses the uploaded MSMS files before queueing so mistakes are reported immediately.
+/// Parses the uploaded files before queueing so mistakes are reported immediately.
 async fn check_inputs(input: PathBuf, spec: &Spec) -> ApiResult<()> {
     let needs_stl = spec.mode == Mode::Legacy;
     let res = tokio::task::spawn_blocking(move || -> Result<(), String> {
+        let pdb = input.join(INPUT_PDB);
+        if pdb.exists() {
+            if needs_stl {
+                return Err(
+                    "legacy mode needs MSMS files and an STL; use the corrected mode for PDB input"
+                        .into(),
+                );
+            }
+            cs_core::io::pdb::Structure::read(&pdb).map_err(|e| e.to_string())?;
+            return Ok(());
+        }
         let s =
             cs_core::io::msms::MsmsSurface::read(&input.join(INPUT_VERT), &input.join(INPUT_FACE))
                 .map_err(|e| e.to_string())?;
@@ -389,8 +406,9 @@ async fn check_inputs(input: PathBuf, spec: &Spec) -> ApiResult<()> {
     res.map_err(ApiError::bad)
 }
 
-/// `multipart/form-data` with files `vert`, `face`, optional `stl`, and optional text fields
-/// `name`, `mode` (`corrected` | `legacy`), `params` (JSON) and `legacy_intermediate`.
+/// `multipart/form-data` with either a `pdb` file or files `vert` + `face` (and `stl` for
+/// legacy mode), plus optional text fields `name`, `mode` (`corrected` | `legacy`),
+/// `params` (JSON), `surface` (JSON, for PDB input) and `legacy_intermediate`.
 async fn create_job(
     State(st): St,
     mut form: Multipart,
@@ -401,8 +419,8 @@ async fn create_job(
     tokio::fs::create_dir_all(&input).await?;
     let result = async {
         let mut opts = Options::default();
-        let mut vert_name = None;
-        let (mut has_vert, mut has_face) = (false, false);
+        let mut file_name = None;
+        let (mut has_vert, mut has_face, mut has_pdb) = (false, false, false);
         while let Some(mut field) = form
             .next_field()
             .await
@@ -413,13 +431,15 @@ async fn create_job(
                 "vert" => Some(INPUT_VERT),
                 "face" => Some(INPUT_FACE),
                 "stl" => Some(INPUT_STL),
+                "pdb" => Some(INPUT_PDB),
                 _ => None,
             };
             if let Some(target) = target {
-                if field_name == "vert" {
-                    vert_name = field
-                        .file_name()
-                        .map(|f| f.trim_end_matches(".vert").to_string());
+                if field_name == "vert" || field_name == "pdb" {
+                    file_name = field.file_name().map(|f| {
+                        let f = f.rsplit(['/', '\\']).next().unwrap_or(f);
+                        f.rsplit_once('.').map_or(f, |(stem, _)| stem).to_string()
+                    });
                 }
                 let mut file = tokio::fs::File::create(input.join(target)).await?;
                 let mut size = 0usize;
@@ -439,6 +459,7 @@ async fn create_job(
                 }
                 has_vert |= field_name == "vert";
                 has_face |= field_name == "face";
+                has_pdb |= field_name == "pdb";
                 continue;
             }
             let text = field
@@ -459,16 +480,29 @@ async fn create_job(
                             .map_err(|e| ApiError::bad(format!("params: {e}")))?,
                     )
                 }
+                "surface" if !text.trim().is_empty() => {
+                    opts.surface = Some(
+                        serde_json::from_str(&text)
+                            .map_err(|e| ApiError::bad(format!("surface: {e}")))?,
+                    )
+                }
                 "legacy_intermediate" => {
                     opts.legacy_intermediate = matches!(text.as_str(), "true" | "1" | "on")
                 }
                 _ => {}
             }
         }
-        if !has_vert || !has_face {
-            return Err(ApiError::bad("both the .vert and .face files are required"));
+        if has_pdb && (has_vert || has_face) {
+            return Err(ApiError::bad(
+                "send either a PDB file or the MSMS .vert/.face files, not both",
+            ));
         }
-        let spec = build_spec(opts, vert_name.as_deref().unwrap_or("protein"))?;
+        if !has_pdb && (!has_vert || !has_face) {
+            return Err(ApiError::bad(
+                "a PDB file, or both the .vert and .face files, are required",
+            ));
+        }
+        let spec = build_spec(opts, file_name.as_deref().unwrap_or("protein"))?;
         check_inputs(input.clone(), &spec).await?;
         st.jobs.submit(&id, &spec)?;
         Ok(())
