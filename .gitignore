@@ -19,3 +19,6 @@ web/dist
 .DS_Store
 
 .env
+
+# Protein-Protein Docking Benchmark (tools/benchmark/fetch.sh)
+/data/benchmark/
