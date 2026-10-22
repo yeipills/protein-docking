@@ -9,6 +9,7 @@
 
 pub mod corrected;
 pub mod error;
+pub mod eval;
 pub mod export;
 pub mod geom;
 pub mod io;

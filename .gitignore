@@ -22,3 +22,6 @@ web/dist
 
 # Agent worktrees
 .claude/worktrees/
+
+# Protein-Protein Docking Benchmark (tools/benchmark/fetch.sh)
+/data/benchmark/
