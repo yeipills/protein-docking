@@ -384,7 +384,7 @@ python scripts/security_scan.py --json
 python scripts/security_scan.py --json
 
 # 2. Revisar reporte
-cat SECURITY_AUDIT_REPORT.md
+cat docs/SECURITY_AUDIT_REPORT.md
 
 # 3. Aplicar actualizaciones
 ./scripts/quick_fix.sh

@@ -675,13 +675,14 @@ docker-compose exec redis redis-cli ping
 
 ### Core Documentation
 - **[README.md](README.md)** - This file, project overview and quick start
-- **[DEPLOYMENT.md](DEPLOYMENT.md)** - Production deployment guide with security checklist
 - **[SECURITY.md](SECURITY.md)** - Security architecture, threat model, and best practices
-- **[TESTING.md](TESTING.md)** - Comprehensive testing guide (pytest, Vitest, Playwright)
-- **[WEBSOCKET.md](WEBSOCKET.md)** - WebSocket protocol and real-time communication guide
-- **[PERFORMANCE_IMPROVEMENTS.md](PERFORMANCE_IMPROVEMENTS.md)** - v2.3.0 performance optimizations (Cython + Parallelization)
-- **[OPTIMIZATION_SUMMARY.md](OPTIMIZATION_SUMMARY.md)** - v2.2.0 optimizations summary
-- **[PENDING_TASKS.md](PENDING_TASKS.md)** - Remaining work and roadmap
+- **[CHANGELOG.md](CHANGELOG.md)** - Release history, including the v2.2/v2.3 performance work
+- **[docs/SETUP.md](docs/SETUP.md)** - Local setup guide
+- **[docs/DOCKER.md](docs/DOCKER.md)** - Docker usage
+- **[docs/DEPLOYMENT.md](docs/DEPLOYMENT.md)** - Production deployment guide with security checklist
+- **[docs/TESTING.md](docs/TESTING.md)** - Comprehensive testing guide (pytest, Vitest, Playwright)
+- **[docs/WEBSOCKET.md](docs/WEBSOCKET.md)** - WebSocket protocol and real-time communication guide
+- **[docs/PENDING_TASKS.md](docs/PENDING_TASKS.md)** - Remaining work and roadmap
 
 ### Additional Resources
 - **[scripts/README.md](scripts/README.md)** - Utility scripts documentation

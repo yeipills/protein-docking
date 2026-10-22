@@ -595,7 +595,6 @@ def warm_cache_distributed():
 ## See Also
 
 - [Observability Guide](./OBSERVABILITY.md) - Monitoring cache metrics
-- [API Documentation](./API.md) - API endpoints
 - [Testing Guide](./TESTING.md) - Testing cached functions
 
 ---

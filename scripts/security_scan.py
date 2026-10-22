@@ -330,7 +330,7 @@ class SecurityScanner:
             print("\n  ✅ No critical vulnerabilities found!")
             print("  Your application is reasonably secure")
 
-        print("\n  📄 Full report available at: SECURITY_AUDIT_REPORT.md")
+        print("\n  📄 Full report available at: docs/SECURITY_AUDIT_REPORT.md")
         print()
 
     def save_json_report(self, filename: str = "security_scan_results.json"):

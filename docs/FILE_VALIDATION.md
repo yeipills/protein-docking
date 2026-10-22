@@ -613,7 +613,6 @@ async def validate_custom_file(file: UploadFile) -> Dict:
 
 ## See Also
 
-- [API Documentation](./API.md) - Upload endpoints
 - [Observability Guide](./OBSERVABILITY.md) - Monitoring validation metrics
 - [Testing Guide](./TESTING.md) - Testing validation logic
 

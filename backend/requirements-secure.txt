@@ -1,6 +1,6 @@
 # SECURE VERSION - Updated dependencies with vulnerability fixes
 # Generated: 2025-11-15
-# See SECURITY_AUDIT_REPORT.md for details
+# See docs/SECURITY_AUDIT_REPORT.md for details
 
 # Core Framework
 fastapi==0.115.3  # Updated from 0.115.0 (includes starlette fixes)

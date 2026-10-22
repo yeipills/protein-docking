@@ -126,5 +126,5 @@ echo "  2. Test the application"
 echo "  3. Run full security scan: python scripts/security_scan.py"
 echo "  4. Commit changes: git add . && git commit -m 'fix: apply critical security updates'"
 echo
-echo "📄 For details, see: SECURITY_AUDIT_REPORT.md"
+echo "📄 For details, see: docs/SECURITY_AUDIT_REPORT.md"
 echo

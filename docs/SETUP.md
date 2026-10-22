@@ -432,7 +432,6 @@ Después del setup:
    - `README.md` - Visión general
    - `DOCKER.md` - Guía detallada de Docker
    - `scripts/README.md` - Scripts de utilidad
-   - `ALGORITHMS_STATUS.md` - Info sobre algoritmos
 
 2. **Explorar la API**:
    - Ir a http://localhost:5000/docs
