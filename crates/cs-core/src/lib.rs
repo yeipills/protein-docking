@@ -16,6 +16,7 @@ pub mod legacy;
 pub mod mesh;
 pub mod model;
 pub mod progress;
+pub mod surface;
 
 pub use error::{Error, Result};
 pub use model::{ContextShapes, Layer, Mode};
