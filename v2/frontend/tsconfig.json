@@ -1,0 +1,46 @@
+{
+  "extends": "./.svelte-kit/tsconfig.json",
+  "compilerOptions": {
+    "allowJs": true,
+    "checkJs": true,
+    "esModuleInterop": true,
+    "forceConsistentCasingInFileNames": true,
+    "resolveJsonModule": true,
+    "skipLibCheck": true,
+    "sourceMap": true,
+    "strict": true,
+    "moduleResolution": "bundler",
+    "target": "es2022",
+    "module": "es2022",
+    "lib": ["es2022", "dom", "dom.iterable", "webworker"],
+    
+    // Optimizaciones de tipos
+    "noImplicitReturns": true,
+    "noFallthroughCasesInSwitch": true,
+    "noImplicitOverride": true,
+    "exactOptionalPropertyTypes": true,
+    "noPropertyAccessFromIndexSignature": true,
+    "noUncheckedIndexedAccess": true,
+    
+    // Nota: baseUrl y paths removidos - SvelteKit maneja esto automáticamente
+    // Los aliases se configuran en svelte.config.js usando kit.alias
+    
+    // Performance optimizations
+    "incremental": true,
+    "tsBuildInfoFile": ".svelte-kit/tsconfig.tsbuildinfo"
+  },
+  "include": [
+    "src/**/*.d.ts",
+    "src/**/*.ts",
+    "src/**/*.js",
+    "src/**/*.svelte",
+    "tests/**/*.ts",
+    "tests/**/*.js"
+  ],
+  "exclude": [
+    "node_modules/**",
+    "build/**",
+    ".svelte-kit/**",
+    "static/wasm/**/*.js" // Exclude generated WASM JS
+  ]
+}

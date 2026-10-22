@@ -1,0 +1,898 @@
+# Protein Docking v2 - Ultra-Optimized Docker Compose
+# Configuración unificada que resuelve todos los conflictos de dependencias
+# AGENTE 4: DevOps & Infrastructure Specialist
+
+# Configuración de redes optimizada
+networks:
+  protein-docking:
+    driver: bridge
+    ipam:
+      driver: default
+      config:
+        - subnet: 172.30.0.0/16
+          gateway: 172.30.0.1
+    driver_opts:
+      com.docker.network.bridge.enable_icc: "true"
+      com.docker.network.bridge.enable_ip_masquerade: "true"
+      com.docker.network.driver.mtu: "1500"
+
+# Volúmenes persistentes optimizados
+volumes:
+  # Base de datos
+  postgres_data:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: ./data/postgres
+  
+  # Cache distribuido
+  redis_node_1:
+    driver: local
+    driver_opts:
+      type: none 
+      o: bind
+      device: ./data/redis/node1
+  
+  redis_node_2:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: ./data/redis/node2
+      
+  redis_node_3:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: ./data/redis/node3
+  
+  # Analytics
+  clickhouse_data:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: ./data/clickhouse
+  
+  # Monitoreo
+  prometheus_data:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: ./data/prometheus
+      
+  grafana_data:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: ./data/grafana
+  
+  # Archivos de aplicación
+  upload_storage:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: ./data/uploads
+      
+  results_storage:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: ./data/results
+
+services:
+  # ====================================================================
+  # BACKEND - Rust Ultra-Optimizado con GPU Support
+  # ====================================================================
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+      target: production
+      args:
+        RUST_VERSION: "1.84"
+        ENABLE_GPU: "true"
+        ENABLE_CUDA: "true"
+        OPTIMIZATION_LEVEL: "3"
+    container_name: protein-docking-backend
+    hostname: backend
+    restart: unless-stopped
+    
+    # Configuración de puertos
+    ports:
+      - "8080:8080"
+      - "8081:8081"  # Metrics endpoint
+    
+    # Variables de entorno unificadas
+    environment:
+      # Rust Configuration
+      - RUST_LOG=info,protein_docking_backend=debug
+      - RUST_BACKTRACE=1
+      - TOKIO_WORKER_THREADS=16
+      - RAYON_NUM_THREADS=16
+      
+      # Database Configuration  
+      - DATABASE_URL=postgresql://protein_user:secure_protein_pass_2024@postgres:5432/protein_docking
+      - DATABASE_MAX_CONNECTIONS=50
+      - DATABASE_ACQUIRE_TIMEOUT=30
+      
+      # Redis Cluster Configuration
+      - REDIS_CLUSTER_URLS=redis://redis-1:6379,redis://redis-2:6380,redis://redis-3:6381
+      - REDIS_CLUSTER_NAME=protein-docking-cluster
+      - REDIS_CONNECTION_TIMEOUT=5000
+      
+      # ClickHouse Analytics
+      - CLICKHOUSE_URL=http://clickhouse:8123
+      - CLICKHOUSE_DATABASE=protein_analytics
+      - CLICKHOUSE_USER=analytics_user
+      - CLICKHOUSE_PASSWORD=secure_analytics_pass_2024
+      
+      # Performance Configuration
+      - PROTEIN_DOCKING_ENABLE_GPU=true
+      - PROTEIN_DOCKING_ENABLE_CUDA=true
+      - PROTEIN_DOCKING_ENABLE_SIMD=true
+      - PROTEIN_DOCKING_MEMORY_POOL_SIZE=8GB
+      - PROTEIN_DOCKING_MAX_CONCURRENT_JOBS=8
+      
+      # File Storage
+      - UPLOAD_DIRECTORY=/app/uploads
+      - RESULTS_DIRECTORY=/app/results
+      - MAX_UPLOAD_SIZE=500MB
+      
+      # Security
+      - JWT_SECRET=ultra_secure_jwt_secret_key_2024_protein_docking
+      - CORS_ORIGINS=http://localhost:3000,https://localhost:3000
+      
+      # Monitoring
+      - ENABLE_METRICS=true
+      - METRICS_PORT=8081
+      - HEALTH_CHECK_INTERVAL=30
+    
+    # Dependencias de servicios
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis-1:
+        condition: service_started
+      redis-2:
+        condition: service_started  
+      redis-3:
+        condition: service_started
+      clickhouse:
+        condition: service_healthy
+    
+    # Volúmenes de almacenamiento
+    volumes:
+      - upload_storage:/app/uploads
+      - results_storage:/app/results
+      - ./logs/backend:/app/logs
+    
+    # Red y configuración de recursos
+    networks:
+      - protein-docking
+    
+    # Límites de recursos optimizados
+    deploy:
+      resources:
+        limits:
+          cpus: '12.0'
+          memory: 24G
+        reservations:
+          cpus: '8.0'
+          memory: 16G
+      restart_policy:
+        condition: unless-stopped
+        delay: 10s
+        max_attempts: 3
+    
+    # Health check optimizado
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+    
+    # Configuración de logging
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "100m"
+        max-file: "5"
+
+  # ====================================================================
+  # FRONTEND - Svelte Ultra-Optimizado
+  # ====================================================================
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+      target: production
+      args:
+        NODE_VERSION: "20"
+        OPTIMIZATION_LEVEL: "production"
+    container_name: protein-docking-frontend
+    hostname: frontend
+    restart: unless-stopped
+    
+    # Configuración de puertos
+    ports:
+      - "3000:3000"
+    
+    # Variables de entorno del frontend
+    environment:
+      - NODE_ENV=production
+      - VITE_API_URL=http://localhost:8080/api/v1
+      - VITE_WS_URL=ws://localhost:8080/ws
+      - VITE_UPLOAD_MAX_SIZE=500MB
+      - VITE_ENABLE_ANALYTICS=true
+      - VITE_ENABLE_PWA=true
+    
+    # Dependencias
+    depends_on:
+      backend:
+        condition: service_healthy
+    
+    # Red
+    networks:
+      - protein-docking
+    
+    # Límites de recursos
+    deploy:
+      resources:
+        limits:
+          cpus: '2.0'
+          memory: 4G
+        reservations:
+          cpus: '1.0'
+          memory: 2G
+    
+    # Health check
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000/"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+    
+    # Logging
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "50m"
+        max-file: "3"
+
+  # ====================================================================
+  # POSTGRESQL - Base de Datos Ultra-Optimizada
+  # ====================================================================
+  postgres:
+    image: postgres:16-alpine
+    container_name: protein-docking-postgres
+    hostname: postgres
+    restart: unless-stopped
+    
+    # Configuración de puertos
+    ports:
+      - "5432:5432"
+    
+    # Variables de entorno de PostgreSQL
+    environment:
+      - POSTGRES_DB=protein_docking
+      - POSTGRES_USER=protein_user
+      - POSTGRES_PASSWORD=secure_protein_pass_2024
+      - POSTGRES_INITDB_ARGS=--data-checksums --encoding=UTF8 --locale=C
+      - PGDATA=/var/lib/postgresql/data/pgdata
+    
+    # Volúmenes de datos
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./backend/migrations:/docker-entrypoint-initdb.d
+      - ./infrastructure/postgres/postgresql.conf:/etc/postgresql/postgresql.conf
+      - ./logs/postgres:/var/log/postgresql
+    
+    # Red
+    networks:
+      - protein-docking
+    
+    # Comando optimizado para máximo rendimiento
+    command: >
+      postgres
+      -c config_file=/etc/postgresql/postgresql.conf
+      -c shared_preload_libraries=pg_stat_statements,pg_buffercache
+      -c max_connections=300
+      -c shared_buffers=2GB
+      -c effective_cache_size=6GB
+      -c maintenance_work_mem=512MB
+      -c checkpoint_completion_target=0.9
+      -c wal_buffers=64MB
+      -c default_statistics_target=500
+      -c random_page_cost=1.1
+      -c effective_io_concurrency=300
+      -c work_mem=16MB
+      -c min_wal_size=2GB
+      -c max_wal_size=8GB
+      -c max_worker_processes=16
+      -c max_parallel_workers_per_gather=8
+      -c max_parallel_workers=16
+      -c log_min_duration_statement=1000
+      -c log_checkpoints=on
+      -c log_lock_waits=on
+    
+    # Límites de recursos
+    deploy:
+      resources:
+        limits:
+          cpus: '4.0'
+          memory: 8G
+        reservations:
+          cpus: '2.0'
+          memory: 4G
+    
+    # Health check
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U protein_user -d protein_docking"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 60s
+    
+    # Configuración de archivos y logging
+    ulimits:
+      memlock:
+        soft: -1
+        hard: -1
+      nofile:
+        soft: 65536
+        hard: 65536
+    
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "100m"
+        max-file: "5"
+
+  # ====================================================================
+  # REDIS CLUSTER - Cache Distribuido Ultra-Optimizado
+  # ====================================================================
+  redis-1:
+    image: redis:7-alpine
+    container_name: protein-docking-redis-1
+    hostname: redis-1
+    restart: unless-stopped
+    
+    ports:
+      - "6379:6379"
+      - "16379:16379"  # Cluster bus
+    
+    volumes:
+      - redis_node_1:/data
+      - ./infrastructure/redis/redis-node-1.conf:/usr/local/etc/redis/redis.conf
+    
+    networks:
+      protein-docking:
+        ipv4_address: 172.30.0.10
+    
+    command: >
+      redis-server /usr/local/etc/redis/redis.conf
+      --port 6379
+      --cluster-enabled yes
+      --cluster-config-file nodes-6379.conf
+      --cluster-node-timeout 15000
+      --cluster-announce-ip 172.30.0.10
+      --cluster-announce-port 6379
+      --cluster-announce-bus-port 16379
+      --appendonly yes
+      --appendfsync everysec
+      --save 900 1
+      --save 300 10
+      --save 60 10000
+      --maxmemory 2gb
+      --maxmemory-policy allkeys-lru
+    
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "50m"
+        max-file: "3"
+
+  redis-2:
+    image: redis:7-alpine
+    container_name: protein-docking-redis-2
+    hostname: redis-2
+    restart: unless-stopped
+    
+    ports:
+      - "6380:6380"
+      - "16380:16380"  # Cluster bus
+    
+    volumes:
+      - redis_node_2:/data
+      - ./infrastructure/redis/redis-node-2.conf:/usr/local/etc/redis/redis.conf
+    
+    networks:
+      protein-docking:
+        ipv4_address: 172.30.0.11
+    
+    command: >
+      redis-server /usr/local/etc/redis/redis.conf
+      --port 6380
+      --cluster-enabled yes
+      --cluster-config-file nodes-6380.conf
+      --cluster-node-timeout 15000
+      --cluster-announce-ip 172.30.0.11
+      --cluster-announce-port 6380
+      --cluster-announce-bus-port 16380
+      --appendonly yes
+      --appendfsync everysec
+      --save 900 1
+      --save 300 10
+      --save 60 10000
+      --maxmemory 2gb
+      --maxmemory-policy allkeys-lru
+    
+    healthcheck:
+      test: ["CMD", "redis-cli", "-p", "6380", "ping"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "50m"
+        max-file: "3"
+
+  redis-3:
+    image: redis:7-alpine
+    container_name: protein-docking-redis-3
+    hostname: redis-3
+    restart: unless-stopped
+    
+    ports:
+      - "6381:6381"
+      - "16381:16381"  # Cluster bus
+    
+    volumes:
+      - redis_node_3:/data
+      - ./infrastructure/redis/redis-node-3.conf:/usr/local/etc/redis/redis.conf
+    
+    networks:
+      protein-docking:
+        ipv4_address: 172.30.0.12
+    
+    command: >
+      redis-server /usr/local/etc/redis/redis.conf
+      --port 6381
+      --cluster-enabled yes
+      --cluster-config-file nodes-6381.conf
+      --cluster-node-timeout 15000
+      --cluster-announce-ip 172.30.0.12
+      --cluster-announce-port 6381
+      --cluster-announce-bus-port 16381
+      --appendonly yes
+      --appendfsync everysec
+      --save 900 1
+      --save 300 10
+      --save 60 10000
+      --maxmemory 2gb
+      --maxmemory-policy allkeys-lru
+    
+    healthcheck:
+      test: ["CMD", "redis-cli", "-p", "6381", "ping"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "50m"
+        max-file: "3"
+
+  # Redis Cluster Initializer
+  redis-cluster-init:
+    image: redis:7-alpine
+    container_name: protein-docking-redis-cluster-init
+    depends_on:
+      - redis-1
+      - redis-2
+      - redis-3
+    networks:
+      - protein-docking
+    command: >
+      sh -c "
+        sleep 30 &&
+        redis-cli --cluster create 
+        172.30.0.10:6379 
+        172.30.0.11:6380 
+        172.30.0.12:6381 
+        --cluster-replicas 0 
+        --cluster-yes
+      "
+    restart: "no"
+
+  # ====================================================================
+  # CLICKHOUSE - Analytics Database Ultra-Optimizada
+  # ====================================================================
+  clickhouse:
+    image: clickhouse/clickhouse-server:24.1-alpine
+    container_name: protein-docking-clickhouse
+    hostname: clickhouse
+    restart: unless-stopped
+    
+    # Configuración de puertos
+    ports:
+      - "8123:8123"  # HTTP interface
+      - "9000:9000"  # Native interface
+      - "9009:9009"  # Interserver HTTP
+    
+    # Variables de entorno
+    environment:
+      - CLICKHOUSE_DB=protein_analytics
+      - CLICKHOUSE_USER=analytics_user
+      - CLICKHOUSE_PASSWORD=secure_analytics_pass_2024
+      - CLICKHOUSE_DEFAULT_ACCESS_MANAGEMENT=1
+    
+    # Volúmenes
+    volumes:
+      - clickhouse_data:/var/lib/clickhouse
+      - ./infrastructure/clickhouse/config.xml:/etc/clickhouse-server/config.xml
+      - ./infrastructure/clickhouse/users.xml:/etc/clickhouse-server/users.xml
+      - ./infrastructure/clickhouse/protein_docking_schema.sql:/docker-entrypoint-initdb.d/init.sql
+      - ./logs/clickhouse:/var/log/clickhouse-server
+    
+    # Red
+    networks:
+      - protein-docking
+    
+    # Límites de recursos
+    deploy:
+      resources:
+        limits:
+          cpus: '4.0'
+          memory: 8G
+        reservations:
+          cpus: '2.0'
+          memory: 4G
+    
+    # Health check
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:8123/ping"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 60s
+    
+    # Configuración de archivos
+    ulimits:
+      nofile:
+        soft: 262144
+        hard: 262144
+    
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "100m"
+        max-file: "5"
+
+  # ====================================================================
+  # NGINX - Load Balancer y Reverse Proxy Ultra-Optimizado
+  # ====================================================================
+  nginx:
+    image: nginx:alpine
+    container_name: protein-docking-nginx
+    hostname: nginx
+    restart: unless-stopped
+    
+    # Configuración de puertos
+    ports:
+      - "80:80"
+      - "443:443"
+      - "8090:8090"  # Status endpoint
+    
+    # Volúmenes de configuración
+    volumes:
+      - ./infrastructure/nginx/nginx.conf:/etc/nginx/nginx.conf
+      - ./infrastructure/nginx/ssl:/etc/nginx/ssl
+      - ./infrastructure/nginx/conf.d:/etc/nginx/conf.d
+      - ./logs/nginx:/var/log/nginx
+    
+    # Dependencias
+    depends_on:
+      backend:
+        condition: service_healthy
+      frontend:
+        condition: service_healthy
+    
+    # Red
+    networks:
+      - protein-docking
+    
+    # Límites de recursos
+    deploy:
+      resources:
+        limits:
+          cpus: '2.0'
+          memory: 2G
+        reservations:
+          cpus: '0.5'
+          memory: 512M
+    
+    # Health check
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8090/nginx_status"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "100m"
+        max-file: "5"
+
+  # ====================================================================
+  # MONITORING STACK
+  # ====================================================================
+  
+  # Prometheus para métricas
+  prometheus:
+    image: prom/prometheus:v2.48.0
+    container_name: protein-docking-prometheus
+    hostname: prometheus
+    restart: unless-stopped
+    
+    ports:
+      - "9090:9090"
+    
+    volumes:
+      - prometheus_data:/prometheus
+      - ./infrastructure/monitoring/prometheus.yml:/etc/prometheus/prometheus.yml
+      - ./infrastructure/monitoring/rules:/etc/prometheus/rules
+    
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--storage.tsdb.retention.time=90d'
+      - '--storage.tsdb.retention.size=100GB'
+      - '--web.console.libraries=/etc/prometheus/console_libraries'
+      - '--web.console.templates=/etc/prometheus/consoles'
+      - '--web.enable-lifecycle'
+      - '--web.enable-admin-api'
+      - '--query.max-concurrency=50'
+      - '--query.timeout=30s'
+    
+    networks:
+      - protein-docking
+    
+    deploy:
+      resources:
+        limits:
+          cpus: '2.0'
+          memory: 4G
+        reservations:
+          cpus: '1.0'
+          memory: 2G
+    
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:9090/-/healthy"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "100m"
+        max-file: "5"
+
+  # Grafana para visualización
+  grafana:
+    image: grafana/grafana:10.2.0
+    container_name: protein-docking-grafana
+    hostname: grafana
+    restart: unless-stopped
+    
+    ports:
+      - "3001:3000"
+    
+    environment:
+      - GF_SECURITY_ADMIN_USER=admin
+      - GF_SECURITY_ADMIN_PASSWORD=secure_grafana_pass_2024
+      - GF_USERS_ALLOW_SIGN_UP=false
+      - GF_INSTALL_PLUGINS=grafana-clock-panel,grafana-piechart-panel,grafana-worldmap-panel
+      - GF_RENDERING_SERVER_URL=http://grafana-renderer:8081/render
+      - GF_RENDERING_CALLBACK_URL=http://grafana:3000/
+      - GF_LOG_FILTERS=rendering:debug
+    
+    volumes:
+      - grafana_data:/var/lib/grafana
+      - ./infrastructure/monitoring/grafana/dashboards:/etc/grafana/provisioning/dashboards
+      - ./infrastructure/monitoring/grafana/datasources:/etc/grafana/provisioning/datasources
+      - ./logs/grafana:/var/log/grafana
+    
+    depends_on:
+      - prometheus
+    
+    networks:
+      - protein-docking
+    
+    deploy:
+      resources:
+        limits:
+          cpus: '1.0'
+          memory: 2G
+        reservations:
+          cpus: '0.5'
+          memory: 1G
+    
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f localhost:3000/api/health || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "50m"
+        max-file: "3"
+
+  # ====================================================================
+  # EXPORTERS PARA MÉTRICAS
+  # ====================================================================
+  
+  # Node Exporter para métricas del sistema
+  node-exporter:
+    image: prom/node-exporter:v1.7.0
+    container_name: protein-docking-node-exporter
+    hostname: node-exporter
+    restart: unless-stopped
+    
+    ports:
+      - "9100:9100"
+    
+    volumes:
+      - /proc:/host/proc:ro
+      - /sys:/host/sys:ro
+      - /:/rootfs:ro
+      - /run/systemd/private:/run/systemd/private:ro
+    
+    command:
+      - '--path.procfs=/host/proc'
+      - '--path.rootfs=/rootfs'
+      - '--path.sysfs=/host/sys'
+      - '--collector.systemd'
+      - '--collector.processes'
+      - '--collector.filesystem.mount-points-exclude=^/(sys|proc|dev|host|etc)($$|/)'
+    
+    networks:
+      - protein-docking
+    
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 512M
+        reservations:
+          cpus: '0.1'
+          memory: 128M
+    
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  # Redis Exporter para métricas de cache
+  redis-exporter:
+    image: oliver006/redis_exporter:v1.55.0
+    container_name: protein-docking-redis-exporter
+    hostname: redis-exporter
+    restart: unless-stopped
+    
+    ports:
+      - "9121:9121"
+    
+    environment:
+      - REDIS_ADDR=redis://redis-1:6379,redis://redis-2:6380,redis://redis-3:6381
+      - REDIS_EXPORTER_LOG_FORMAT=json
+    
+    depends_on:
+      - redis-1
+      - redis-2
+      - redis-3
+    
+    networks:
+      - protein-docking
+    
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 256M
+        reservations:
+          cpus: '0.1'
+          memory: 64M
+    
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  # Postgres Exporter para métricas de BD
+  postgres-exporter:
+    image: prometheuscommunity/postgres-exporter:v0.15.0
+    container_name: protein-docking-postgres-exporter
+    hostname: postgres-exporter
+    restart: unless-stopped
+    
+    ports:
+      - "9187:9187"
+    
+    environment:
+      - DATA_SOURCE_NAME=postgresql://protein_user:secure_protein_pass_2024@postgres:5432/protein_docking?sslmode=disable
+      - PG_EXPORTER_EXTEND_QUERY_PATH=/etc/postgres_exporter/queries.yaml
+    
+    volumes:
+      - ./infrastructure/monitoring/postgres-queries.yaml:/etc/postgres_exporter/queries.yaml
+    
+    depends_on:
+      postgres:
+        condition: service_healthy
+    
+    networks:
+      - protein-docking
+    
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 256M
+        reservations:
+          cpus: '0.1'
+          memory: 64M
+    
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+# ====================================================================
+# CONFIGURACIONES GLOBALES
+# ====================================================================
+
+# Configuración x-logging común
+x-logging: &default-logging
+  driver: "json-file"
+  options:
+    max-size: "100m"
+    max-file: "5"
+    labels: "service,environment"
+
+# Configuración x-deploy común
+x-deploy: &default-deploy
+  restart_policy:
+    condition: unless-stopped
+    delay: 10s
+    max_attempts: 3
+    window: 120s
+  update_config:
+    parallelism: 1
+    delay: 30s
+    failure_action: rollback
+    order: stop-first

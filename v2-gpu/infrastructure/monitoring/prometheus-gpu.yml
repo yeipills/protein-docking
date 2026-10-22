@@ -1,0 +1,52 @@
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+
+rule_files:
+  - "/etc/prometheus/rules/*.yml"
+
+alerting:
+  alertmanagers:
+    - static_configs:
+        - targets: []
+
+scrape_configs:
+  # Backend GPU metrics
+  - job_name: 'backend-gpu'
+    static_configs:
+      - targets: ['backend-gpu:8081', 'backend-gpu:8082']
+    scrape_interval: 10s
+    metrics_path: /metrics
+
+  # NVIDIA GPU metrics via nvidia-exporter
+  - job_name: 'nvidia-gpu'
+    static_configs:
+      - targets: ['nvidia-exporter:9445']
+    scrape_interval: 5s
+
+  # DCGM GPU metrics (advanced)
+  - job_name: 'dcgm-gpu'
+    static_configs:
+      - targets: ['dcgm-exporter:9400']
+    scrape_interval: 5s
+
+  # System metrics
+  - job_name: 'node-exporter'
+    static_configs:
+      - targets: ['node-exporter:9100']
+
+  # PostgreSQL GPU metrics
+  - job_name: 'postgres-gpu'
+    static_configs:
+      - targets: ['postgres-exporter:9187']
+
+  # Redis GPU cluster metrics
+  - job_name: 'redis-gpu'
+    static_configs:
+      - targets: ['redis-exporter:9121']
+
+  # Nginx GPU metrics
+  - job_name: 'nginx-gpu'
+    static_configs:
+      - targets: ['nginx-gpu:8090']
+    metrics_path: /nginx_status

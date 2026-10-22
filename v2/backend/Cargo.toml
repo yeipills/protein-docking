@@ -1,0 +1,112 @@
+[package]
+name = "protein-docking-backend"
+version = "2.0.0"
+edition = "2021"
+authors = ["PPD Team"]
+description = "Ultra-optimized protein docking backend with SIMD and GPU support"
+license = "MIT"
+
+[lib]
+name = "protein_docking_backend"
+path = "src/lib.rs"
+
+[[bin]]
+name = "protein-docking-server"
+path = "src/main.rs"
+
+[dependencies]
+# Web framework y async runtime
+actix-web = "4.9"
+actix-cors = "0.7"
+actix-files = "0.6"
+actix-multipart = "0.7"
+tokio = { version = "1.40", features = ["full", "rt-multi-thread"] }
+futures = "0.3"
+
+# Serialización
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+
+# Logging y tracing
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+log = "0.4"
+env_logger = "0.11"
+
+# Performance y paralelización
+rayon = "1.10"
+num_cpus = "1.16"
+mimalloc = "0.1"
+lazy_static = "1.5"
+
+# Matemáticas y algoritmos científicos
+ndarray = "0.16"
+nalgebra = "0.33"
+rand = "0.8"
+rand_distr = "0.4"
+
+# Time y date
+chrono = { version = "0.4", features = ["serde"] }
+
+# UUID para job IDs
+uuid = { version = "1.10", features = ["v4", "serde"] }
+
+# Error handling
+anyhow = "1.0"
+thiserror = "1.0"
+
+# File I/O y parsing
+regex = "1.10"
+
+# Database (opcional por ahora)
+sqlx = { version = "0.8", features = ["runtime-tokio-rustls", "postgres", "chrono", "uuid"], optional = true }
+
+# Redis (opcional por ahora)
+redis = { version = "0.27", features = ["tokio-comp", "connection-manager"], optional = true }
+
+# gRPC (opcional por ahora)
+tonic = { version = "0.12", optional = true }
+prost = { version = "0.13", optional = true }
+
+# Config management
+config = "0.14"
+dotenv = "0.15"
+
+# Compression
+flate2 = "1.0"
+
+# Async utilities
+async-trait = "0.1"
+
+# Metrics (opcional)
+prometheus = { version = "0.13", optional = true }
+
+[dev-dependencies]
+actix-rt = "2.10"
+criterion = "0.5"
+
+[features]
+default = []
+full = ["database", "cache", "grpc", "metrics"]
+database = ["dep:sqlx"]
+cache = ["dep:redis"]
+grpc = ["dep:tonic", "dep:prost"]
+metrics = ["dep:prometheus"]
+
+[profile.release]
+opt-level = 3
+lto = "fat"
+codegen-units = 1
+strip = true
+panic = "abort"
+
+[profile.dev]
+opt-level = 1
+
+[profile.bench]
+inherits = "release"
+debug = true
+
+[[bench]]
+name = "docking_benchmark"
+harness = false

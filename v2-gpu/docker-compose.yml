@@ -1,0 +1,217 @@
+# Docker Compose configuration removed version field
+
+services:
+  # Backend Rust ultra-optimizado
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+      target: production
+    ports:
+      - "8080:8080"
+    environment:
+      - RUST_LOG=info
+      - TOKIO_WORKER_THREADS=16
+      - RAYON_NUM_THREADS=16
+      - PROTEIN_DOCKING_DATABASE_URL=postgresql://protein_user:protein_pass@postgres:5432/protein_docking
+      - PROTEIN_DOCKING_REDIS_CLUSTER_URLS=redis://redis-1:6379,redis://redis-2:6379,redis://redis-3:6379
+      - PROTEIN_DOCKING_PERFORMANCE_ENABLE_GPU=true
+      - PROTEIN_DOCKING_PERFORMANCE_ENABLE_SIMD=true
+    depends_on:
+      - postgres
+      - redis-1
+      - redis-2
+      - redis-3
+    volumes:
+      - ./data/uploads:/app/uploads
+      - ./data/results:/app/results
+    networks:
+      - protein-network
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          cpus: '8.0'
+          memory: 16G
+        reservations:
+          cpus: '4.0'
+          memory: 8G
+
+  # Frontend Svelte optimizado
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+      target: production
+    ports:
+      - "3000:3000"
+    environment:
+      - VITE_API_URL=http://localhost:8080/api/v1
+      - VITE_WS_URL=ws://localhost:8080/ws
+      - NODE_ENV=production
+    depends_on:
+      - backend
+    networks:
+      - protein-network
+    restart: unless-stopped
+
+  # PostgreSQL optimizado para performance
+  postgres:
+    image: postgres:15-alpine
+    environment:
+      - POSTGRES_DB=protein_docking
+      - POSTGRES_USER=protein_user
+      - POSTGRES_PASSWORD=protein_pass
+      - POSTGRES_INITDB_ARGS=--encoding=UTF8 --locale=C
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./infrastructure/postgres/init.sql:/docker-entrypoint-initdb.d/init.sql
+      - ./infrastructure/postgres/postgresql.conf:/etc/postgresql/postgresql.conf
+    command: postgres -c config_file=/etc/postgresql/postgresql.conf
+    ports:
+      - "5432:5432"
+    networks:
+      - protein-network
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          memory: 4G
+        reservations:
+          memory: 2G
+
+  # Redis Cluster para cache distribuido
+  redis-1:
+    image: redis:7-alpine
+    command: redis-server --cluster-enabled yes --cluster-config-file nodes-6379.conf --cluster-node-timeout 5000 --appendonly yes --port 6379
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_1_data:/data
+    networks:
+      - protein-network
+    restart: unless-stopped
+
+  redis-2:
+    image: redis:7-alpine
+    command: redis-server --cluster-enabled yes --cluster-config-file nodes-6380.conf --cluster-node-timeout 5000 --appendonly yes --port 6380
+    ports:
+      - "6380:6380"
+    volumes:
+      - redis_2_data:/data
+    networks:
+      - protein-network
+    restart: unless-stopped
+
+  redis-3:
+    image: redis:7-alpine
+    command: redis-server --cluster-enabled yes --cluster-config-file nodes-6381.conf --cluster-node-timeout 5000 --appendonly yes --port 6381
+    ports:
+      - "6381:6381"
+    volumes:
+      - redis_3_data:/data
+    networks:
+      - protein-network
+    restart: unless-stopped
+
+  # ClickHouse para analytics
+  clickhouse:
+    image: clickhouse/clickhouse-server:latest
+    environment:
+      - CLICKHOUSE_DB=protein_analytics
+      - CLICKHOUSE_USER=analytics_user
+      - CLICKHOUSE_PASSWORD=analytics_pass
+      - CLICKHOUSE_DEFAULT_ACCESS_MANAGEMENT=1
+    volumes:
+      - clickhouse_data:/var/lib/clickhouse
+      - ./infrastructure/clickhouse/config.xml:/etc/clickhouse-server/config.xml
+      - ./infrastructure/clickhouse/users.xml:/etc/clickhouse-server/users.xml
+    ports:
+      - "8123:8123"  # HTTP interface
+      - "9000:9000"  # Native interface
+    networks:
+      - protein-network
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          memory: 4G
+        reservations:
+          memory: 2G
+
+  # Prometheus para métricas
+  prometheus:
+    image: prom/prometheus:latest
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--web.console.libraries=/etc/prometheus/console_libraries'
+      - '--web.console.templates=/etc/prometheus/consoles'
+      - '--storage.tsdb.retention.time=200h'
+      - '--web.enable-lifecycle'
+    volumes:
+      - ./infrastructure/monitoring/prometheus.yml:/etc/prometheus/prometheus.yml
+      - prometheus_data:/prometheus
+    ports:
+      - "9090:9090"
+    networks:
+      - protein-network
+    restart: unless-stopped
+
+  # Grafana para visualización
+  grafana:
+    image: grafana/grafana:latest
+    environment:
+      - GF_SECURITY_ADMIN_USER=admin
+      - GF_SECURITY_ADMIN_PASSWORD=grafana_pass
+      - GF_USERS_ALLOW_SIGN_UP=false
+    volumes:
+      - grafana_data:/var/lib/grafana
+      - ./infrastructure/monitoring/grafana/dashboards:/etc/grafana/provisioning/dashboards
+      - ./infrastructure/monitoring/grafana/datasources:/etc/grafana/provisioning/datasources
+    ports:
+      - "3001:3000"
+    depends_on:
+      - prometheus
+    networks:
+      - protein-network
+    restart: unless-stopped
+
+  # Nginx reverse proxy y load balancer
+  nginx:
+    image: nginx:alpine
+    volumes:
+      - ./infrastructure/nginx/nginx.conf:/etc/nginx/nginx.conf
+      - ./infrastructure/nginx/ssl:/etc/nginx/ssl
+    ports:
+      - "80:80"
+      - "443:443"
+    depends_on:
+      - frontend
+      - backend
+    networks:
+      - protein-network
+    restart: unless-stopped
+
+volumes:
+  postgres_data:
+    driver: local
+  redis_1_data:
+    driver: local
+  redis_2_data:
+    driver: local
+  redis_3_data:
+    driver: local
+  clickhouse_data:
+    driver: local
+  prometheus_data:
+    driver: local
+  grafana_data:
+    driver: local
+
+networks:
+  protein-network:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.20.0.0/16

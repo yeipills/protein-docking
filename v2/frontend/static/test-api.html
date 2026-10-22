@@ -1,0 +1,312 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>API Test - Protein Docking Backend</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            max-width: 1000px;
+            margin: 0 auto;
+            padding: 2rem;
+            background: #f8fafc;
+        }
+
+        .container {
+            background: white;
+            padding: 2rem;
+            border-radius: 12px;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+            margin-bottom: 2rem;
+        }
+
+        .container h2 {
+            margin-top: 0;
+            color: #1f2937;
+            border-bottom: 2px solid #e5e7eb;
+            padding-bottom: 0.5rem;
+        }
+
+        .test-section {
+            margin: 1.5rem 0;
+            padding: 1rem;
+            background: #f9fafb;
+            border-radius: 8px;
+            border: 1px solid #e5e7eb;
+        }
+
+        .test-section h3 {
+            margin: 0 0 1rem 0;
+            color: #374151;
+        }
+
+        .btn {
+            background: #3b82f6;
+            color: white;
+            border: none;
+            padding: 0.75rem 1.5rem;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 0.9rem;
+            margin-right: 0.5rem;
+            transition: background 0.2s;
+        }
+
+        .btn:hover {
+            background: #2563eb;
+        }
+
+        .btn:disabled {
+            background: #9ca3af;
+            cursor: not-allowed;
+        }
+
+        .result {
+            margin-top: 1rem;
+            padding: 1rem;
+            border-radius: 6px;
+            font-family: 'Courier New', monospace;
+            font-size: 0.8rem;
+            white-space: pre-wrap;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+
+        .success {
+            background: #d1fae5;
+            border: 1px solid #10b981;
+            color: #065f46;
+        }
+
+        .error {
+            background: #fee2e2;
+            border: 1px solid #ef4444;
+            color: #991b1b;
+        }
+
+        .loading {
+            background: #fef3c7;
+            border: 1px solid #f59e0b;
+            color: #92400e;
+        }
+
+        select {
+            padding: 0.5rem;
+            border: 1px solid #d1d5db;
+            border-radius: 4px;
+            background: white;
+            margin-right: 0.5rem;
+        }
+
+        .status-indicator {
+            display: inline-block;
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            margin-right: 0.5rem;
+        }
+
+        .status-connected {
+            background: #10b981;
+        }
+
+        .status-disconnected {
+            background: #ef4444;
+        }
+
+        .status-checking {
+            background: #f59e0b;
+            animation: pulse 1s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+    </style>
+</head>
+<body>
+    <h1>🧬 Protein Docking API Test</h1>
+    
+    <div class="container">
+        <h2>📡 Connection Status</h2>
+        <div id="connection-status">
+            <span class="status-indicator status-checking"></span>
+            <span>Checking connection...</span>
+        </div>
+        <div id="backend-info"></div>
+    </div>
+
+    <div class="container">
+        <h2>🏥 Health Check</h2>
+        <div class="test-section">
+            <h3>System Health</h3>
+            <button class="btn" onclick="testHealth()">Test Health</button>
+            <button class="btn" onclick="testPing()">Test Ping</button>
+            <div id="health-result"></div>
+        </div>
+    </div>
+
+    <div class="container">
+        <h2>🧬 PDB Parser Test</h2>
+        <div class="test-section">
+            <h3>Parse PDB File</h3>
+            <select id="pdb-file">
+                <option value="">Select PDB file...</option>
+                <option value="2f6d.pdb">2f6d.pdb</option>
+                <option value="4jet.pdb">4jet.pdb</option>
+                <option value="6izr.pdb">6izr.pdb</option>
+                <option value="6qtl.pdb">6qtl.pdb</option>
+                <option value="8e5d.pdb">8e5d.pdb</option>
+            </select>
+            <button class="btn" onclick="testPdbParser()">Parse PDB</button>
+            <div id="pdb-result"></div>
+        </div>
+    </div>
+
+    <div class="container">
+        <h2>⚗️ Molecular Docking Test</h2>
+        <div class="test-section">
+            <h3>Protein Docking</h3>
+            <select id="receptor-file">
+                <option value="">Select receptor...</option>
+                <option value="2f6d.pdb">2f6d.pdb</option>
+                <option value="4jet.pdb">4jet.pdb</option>
+                <option value="6izr.pdb">6izr.pdb</option>
+                <option value="6qtl.pdb">6qtl.pdb</option>
+                <option value="8e5d.pdb">8e5d.pdb</option>
+            </select>
+            <select id="ligand-file">
+                <option value="">Select ligand...</option>
+                <option value="2f6d.pdb">2f6d.pdb</option>
+                <option value="4jet.pdb">4jet.pdb</option>
+                <option value="6izr.pdb">6izr.pdb</option>
+                <option value="6qtl.pdb">6qtl.pdb</option>
+                <option value="8e5d.pdb">8e5d.pdb</option>
+            </select>
+            <button class="btn" onclick="testDocking()">Start Docking</button>
+            <div id="docking-result"></div>
+        </div>
+    </div>
+
+    <script>
+        const API_BASE = 'http://localhost:8080';
+        const API_V1 = API_BASE + '/api/v1';
+
+        let connectionStatus = 'checking';
+
+        function updateConnectionStatus(status, info) {
+            connectionStatus = status;
+            const statusEl = document.getElementById('connection-status');
+            const infoEl = document.getElementById('backend-info');
+            
+            const indicator = statusEl.querySelector('.status-indicator');
+            indicator.className = `status-indicator status-${status}`;
+            
+            if (status === 'connected') {
+                statusEl.innerHTML = `<span class="status-indicator status-connected"></span><span>✅ Connected to backend</span>`;
+                infoEl.innerHTML = `<p><strong>Backend URL:</strong> ${API_BASE}</p><p><strong>API Version:</strong> ${API_V1}</p>`;
+            } else if (status === 'disconnected') {
+                statusEl.innerHTML = `<span class="status-indicator status-disconnected"></span><span>❌ Backend disconnected</span>`;
+                infoEl.innerHTML = `<p style="color: #dc2626;">Cannot connect to backend. Make sure it's running on port 8080.</p>`;
+            }
+        }
+
+        function showResult(elementId, result, isError = false) {
+            const element = document.getElementById(elementId);
+            element.className = `result ${isError ? 'error' : 'success'}`;
+            element.textContent = JSON.stringify(result, null, 2);
+        }
+
+        function showLoading(elementId, message = 'Loading...') {
+            const element = document.getElementById(elementId);
+            element.className = 'result loading';
+            element.textContent = message;
+        }
+
+        async function testConnection() {
+            try {
+                const response = await fetch(`${API_V1}/ping`);
+                const data = await response.json();
+                updateConnectionStatus('connected', data);
+                return true;
+            } catch (error) {
+                console.error('Connection test failed:', error);
+                updateConnectionStatus('disconnected');
+                return false;
+            }
+        }
+
+        async function testHealth() {
+            showLoading('health-result', 'Checking system health...');
+            try {
+                const response = await fetch(`${API_BASE}/health`);
+                const data = await response.json();
+                showResult('health-result', data);
+            } catch (error) {
+                showResult('health-result', { error: error.message }, true);
+            }
+        }
+
+        async function testPing() {
+            showLoading('health-result', 'Pinging backend...');
+            try {
+                const response = await fetch(`${API_V1}/ping`);
+                const data = await response.json();
+                showResult('health-result', data);
+            } catch (error) {
+                showResult('health-result', { error: error.message }, true);
+            }
+        }
+
+        async function testPdbParser() {
+            const filename = document.getElementById('pdb-file').value;
+            if (!filename) {
+                alert('Please select a PDB file');
+                return;
+            }
+
+            showLoading('pdb-result', `Parsing ${filename}...`);
+            try {
+                const response = await fetch(`${API_V1}/parse_pdb/${filename}`);
+                const data = await response.json();
+                showResult('pdb-result', data);
+            } catch (error) {
+                showResult('pdb-result', { error: error.message }, true);
+            }
+        }
+
+        async function testDocking() {
+            const receptor = document.getElementById('receptor-file').value;
+            const ligand = document.getElementById('ligand-file').value;
+            
+            if (!receptor || !ligand) {
+                alert('Please select both receptor and ligand files');
+                return;
+            }
+
+            if (receptor === ligand) {
+                alert('Receptor and ligand must be different files');
+                return;
+            }
+
+            showLoading('docking-result', `Docking ${receptor} with ${ligand}...`);
+            try {
+                const response = await fetch(`${API_V1}/dock/${receptor}/${ligand}`, {
+                    method: 'POST'
+                });
+                const data = await response.json();
+                showResult('docking-result', data);
+            } catch (error) {
+                showResult('docking-result', { error: error.message }, true);
+            }
+        }
+
+        // Test connection on load
+        window.addEventListener('load', () => {
+            testConnection();
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>API Test</title>
+</head>
+<body>
+  <h1>API Test</h1>
+  <button onclick="testAPI()">Test API Connection</button>
+  <button onclick="testJobs()">Test Jobs Endpoint</button>
+  <button onclick="createJob()">Create Test Job</button>
+  <pre id="output"></pre>
+
+  <script>
+    const output = document.getElementById('output');
+    
+    function log(message) {
+      output.textContent += message + '\n';
+    }
+    
+    async function testAPI() {
+      output.textContent = '';
+      log('Testing API connection...');
+      
+      try {
+        const response = await fetch('http://localhost:3001/api/health');
+        const data = await response.json();
+        log('✅ API Health: ' + JSON.stringify(data, null, 2));
+      } catch (error) {
+        log('❌ API Health failed: ' + error.message);
+      }
+    }
+    
+    async function testJobs() {
+      output.textContent = '';
+      log('Testing jobs endpoint...');
+      
+      try {
+        const response = await fetch('http://localhost:3001/api/jobs');
+        const data = await response.json();
+        log('✅ Jobs: ' + JSON.stringify(data, null, 2));
+      } catch (error) {
+        log('❌ Jobs failed: ' + error.message);
+      }
+    }
+    
+    async function createJob() {
+      output.textContent = '';
+      log('Creating test job...');
+      
+      try {
+        const response = await fetch('http://localhost:3001/api/jobs', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            receptor_file_id: 'test-receptor-web',
+            ligand_file_id: 'test-ligand-web',
+            config: { max_poses: 50 }
+          })
+        });
+        
+        const data = await response.json();
+        log('✅ Job created: ' + JSON.stringify(data, null, 2));
+        
+        // Now check jobs again
+        setTimeout(async () => {
+          const jobsResponse = await fetch('http://localhost:3001/api/jobs');
+          const jobsData = await jobsResponse.json();
+          log('✅ Jobs after create: ' + JSON.stringify(jobsData, null, 2));
+        }, 1000);
+        
+      } catch (error) {
+        log('❌ Create job failed: ' + error.message);
+      }
+    }
+  </script>
+</body>
+</html>

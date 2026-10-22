@@ -1,0 +1,53 @@
+{{- if .Values.persistence.uploads.enabled }}
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: {{ include "protein-docking.fullname" . }}-uploads
+  labels:
+    {{- include "protein-docking.labels" . | nindent 4 }}
+    app.kubernetes.io/component: storage
+spec:
+  accessModes:
+    - {{ .Values.persistence.uploads.accessMode }}
+  storageClassName: {{ .Values.persistence.uploads.storageClass }}
+  resources:
+    requests:
+      storage: {{ .Values.persistence.uploads.size }}
+{{- end }}
+
+{{- if .Values.persistence.results.enabled }}
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: {{ include "protein-docking.fullname" . }}-results
+  labels:
+    {{- include "protein-docking.labels" . | nindent 4 }}
+    app.kubernetes.io/component: storage
+spec:
+  accessModes:
+    - {{ .Values.persistence.results.accessMode }}
+  storageClassName: {{ .Values.persistence.results.storageClass }}
+  resources:
+    requests:
+      storage: {{ .Values.persistence.results.size }}
+{{- end }}
+
+{{- if .Values.persistence.cache.enabled }}
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: {{ include "protein-docking.fullname" . }}-cache
+  labels:
+    {{- include "protein-docking.labels" . | nindent 4 }}
+    app.kubernetes.io/component: storage
+spec:
+  accessModes:
+    - {{ .Values.persistence.cache.accessMode }}
+  storageClassName: {{ .Values.persistence.cache.storageClass }}
+  resources:
+    requests:
+      storage: {{ .Values.persistence.cache.size }}
+{{- end }}

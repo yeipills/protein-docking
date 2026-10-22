@@ -1,0 +1,43 @@
+[package]
+name = "docking-wasm"
+version = "2.0.0"
+edition = "2021"
+description = "Ultra-optimized WebAssembly module for protein docking calculations"
+license = "MIT"
+authors = ["Protein Docking Team"]
+
+[lib]
+crate-type = ["cdylib"]
+
+[dependencies]
+wasm-bindgen = "0.2"
+js-sys = "0.3"
+web-sys = "0.3"
+
+[dependencies.web-sys]
+version = "0.3"
+features = [
+  "console",
+  "Performance",
+  "Window",
+  "CanvasRenderingContext2d",
+  "WebGlRenderingContext",
+]
+
+[dependencies.wasm-bindgen]
+version = "0.2"
+features = ["serde-serialize"]
+
+[profile.release]
+# Optimizaciones máximas para WebAssembly
+opt-level = "s"          # Optimizar para tamaño
+lto = true              # Link Time Optimization
+codegen-units = 1       # Mejor optimización
+panic = "abort"         # Reducir tamaño del binario
+strip = true           # Eliminar símbolos de debug
+
+[profile.dev]
+# Configuración de desarrollo
+opt-level = 0
+debug = true
+overflow-checks = true

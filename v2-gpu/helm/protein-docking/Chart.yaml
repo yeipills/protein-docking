@@ -1,0 +1,25 @@
+apiVersion: v2
+name: protein-docking
+description: Ultra-optimized protein docking system with GPU acceleration
+type: application
+version: 2.0.0
+appVersion: "2.0.0"
+
+keywords:
+  - bioinformatics
+  - protein-docking
+  - gpu-acceleration
+  - molecular-modeling
+  - cuda
+
+home: https://github.com/yeipills/protein-docking
+sources:
+  - https://github.com/yeipills/protein-docking
+
+maintainers:
+  - name: AGENTE 4
+    email: devops@protein-docking.com
+
+annotations:
+  category: Bioinformatics
+  licenses: MIT

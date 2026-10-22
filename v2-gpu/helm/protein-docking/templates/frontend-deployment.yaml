@@ -1,0 +1,90 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "protein-docking.fullname" . }}-frontend
+  labels:
+    {{- include "protein-docking.labels" . | nindent 4 }}
+    app.kubernetes.io/component: frontend
+spec:
+  {{- if not .Values.autoscaling.frontend.enabled }}
+  replicas: {{ .Values.replicaCount.frontend }}
+  {{- end }}
+  selector:
+    matchLabels:
+      {{- include "protein-docking.selectorLabels" . | nindent 6 }}
+      app.kubernetes.io/component: frontend
+  template:
+    metadata:
+      annotations:
+        checksum/config: {{ include (print $.Template.BasePath "/configmap.yaml") . | sha256sum }}
+      labels:
+        {{- include "protein-docking.selectorLabels" . | nindent 8 }}
+        app.kubernetes.io/component: frontend
+    spec:
+      {{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      serviceAccountName: {{ include "protein-docking.serviceAccountName" . }}
+      securityContext:
+        {{- toYaml .Values.podSecurityContext | nindent 8 }}
+      containers:
+        - name: frontend
+          securityContext:
+            {{- toYaml .Values.securityContext | nindent 12 }}
+          image: "{{ .Values.global.imageRegistry }}/{{ .Values.image.frontend.repository }}:{{ .Values.image.frontend.tag }}"
+          imagePullPolicy: {{ .Values.image.frontend.pullPolicy }}
+          ports:
+            - name: http
+              containerPort: 3000
+              protocol: TCP
+          livenessProbe:
+            {{- toYaml .Values.healthChecks.frontend.livenessProbe | nindent 12 }}
+          readinessProbe:
+            {{- toYaml .Values.healthChecks.frontend.readinessProbe | nindent 12 }}
+          env:
+            # Frontend environment variables
+            {{- range $key, $value := .Values.env.frontend }}
+            - name: {{ $key }}
+              value: {{ $value | quote }}
+            {{- end }}
+            
+            # API URLs
+            - name: VITE_API_URL
+              value: "https://{{ (index .Values.ingress.hosts 0).host }}/api/v1"
+            - name: VITE_WS_URL
+              value: "wss://{{ (index .Values.ingress.hosts 0).host }}/ws"
+            
+            {{- if .Values.gpu.enabled }}
+            - name: VITE_GPU_METRICS_URL
+              value: "https://{{ (index .Values.ingress.hosts 0).host }}/api/gpu/metrics"
+            - name: VITE_ENABLE_GPU_MONITORING
+              value: "true"
+            {{- end }}
+          
+          resources:
+            {{- toYaml .Values.resources.frontend | nindent 12 }}
+          
+          volumeMounts:
+            - name: nginx-config
+              mountPath: /etc/nginx/conf.d
+              readOnly: true
+      
+      volumes:
+        - name: nginx-config
+          configMap:
+            name: {{ include "protein-docking.fullname" . }}-nginx-config
+      
+      {{- with .Values.nodeAffinity.frontend }}
+      affinity:
+        nodeAffinity:
+          {{- toYaml . | nindent 10 }}
+      {{- end }}
+      {{- with .Values.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
