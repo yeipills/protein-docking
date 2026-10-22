@@ -9,7 +9,7 @@ from sqlalchemy.orm import Session
 from app.database import get_db
 from app.models.user import User
 from app.core.security import decode_token
-from app.core.exceptions import UnauthorizedException, NotFoundException
+from app.core.exceptions import UnauthorizedException, ForbiddenException, NotFoundException
 from app.core.logging import get_logger
 
 logger = get_logger(__name__)
@@ -109,13 +109,13 @@ async def get_current_superuser(
         User: Current superuser
 
     Raises:
-        UnauthorizedException: If user is not a superuser
+        ForbiddenException: If user is not a superuser
     """
     if not current_user.is_superuser:
         logger.warning(
             f"Non-superuser attempted admin access: {current_user.username}"
         )
-        raise UnauthorizedException(detail="Not enough permissions")
+        raise ForbiddenException(detail="Not enough permissions")
 
     return current_user
 

@@ -21,6 +21,7 @@ settings = get_settings()
 from app.models.user import User
 from app.models.job import Job
 from app.models.protein import Protein
+from app.models.audit_log import AuditLog
 
 # this is the Alembic Config object
 config = context.config

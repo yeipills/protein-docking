@@ -211,5 +211,5 @@ if __name__ == '__main__':
         host=settings.SOCKET_HOST,
         port=settings.SOCKET_PORT,
         debug=settings.ENVIRONMENT == 'development',
-        allow_unsafe_werkzeug=True  # Required for development mode
+        allow_unsafe_werkzeug=settings.ENVIRONMENT == 'development'
     )

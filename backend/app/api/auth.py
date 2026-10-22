@@ -20,6 +20,8 @@ from app.core.exceptions import (
     ValidationException
 )
 from app.core.logging import get_logger
+from app.core.audit import log_from_request
+from app.models.audit_log import AuditAction, AuditSeverity
 from app.core.rate_limit import (
     limiter,
     RateLimitTier

@@ -16,7 +16,7 @@ class TestUserRegistrationAndLogin:
             "email": "integration@test.com",
             "username": "integrationuser",
             "full_name": "Integration Test",
-            "password": "securepass123",
+            "password": "SecurePass123!",
         }
         register_response = client.post("/api/v1/auth/register", json=register_data)
         assert register_response.status_code == status.HTTP_201_CREATED
@@ -24,7 +24,7 @@ class TestUserRegistrationAndLogin:
         # Login with same credentials
         login_response = client.post(
             "/api/v1/auth/login",
-            json={"username": "integrationuser", "password": "securepass123"},
+            json={"username": "integrationuser", "password": "SecurePass123!"},
         )
         assert login_response.status_code == status.HTTP_200_OK
         assert "access_token" in login_response.json()

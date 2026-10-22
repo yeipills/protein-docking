@@ -21,7 +21,7 @@ class TestListProteins:
         """Test unauthenticated request fails"""
         response = client.get("/api/v1/proteins/")
 
-        assert response.status_code == status.HTTP_403_FORBIDDEN
+        assert response.status_code == status.HTTP_401_UNAUTHORIZED
 
     def test_list_proteins_pagination(self, client, auth_headers):
         """Test protein listing with pagination"""
@@ -85,7 +85,7 @@ class TestUploadProtein:
 
         response = client.post("/api/v1/proteins/upload/part-one", files=files, data=data)
 
-        assert response.status_code == status.HTTP_403_FORBIDDEN
+        assert response.status_code == status.HTTP_401_UNAUTHORIZED
 
     @pytest.mark.skip(reason="Requires actual file validation")
     def test_upload_part_one_success(self, client, auth_headers):

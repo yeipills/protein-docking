@@ -27,9 +27,11 @@ class Job(Base):
     __tablename__ = "jobs"
     __table_args__ = (
         # Composite indexes for common queries (improves query performance 3-5x)
-        Index('idx_user_status', 'user_id', 'status'),  # List user jobs filtered by status
-        Index('idx_user_created', 'user_id', 'created_at'),  # List user jobs sorted by date
-        Index('idx_status_created', 'status', 'created_at'),  # Admin queries by status and date
+        Index('idx_jobs_user_status', 'user_id', 'status'),  # List user jobs filtered by status
+        Index('idx_jobs_user_created', 'user_id', 'created_at'),  # List user jobs sorted by date
+        Index('idx_jobs_status_created', 'status', 'created_at'),  # Admin queries by status and date
+        Index('ix_jobs_user_status_created', 'user_id', 'status', 'created_at'),  # Added in migration 003
+        Index('ix_jobs_created_at', 'created_at'),  # Added in migration 003
     )
 
     id = Column(Integer, primary_key=True, index=True)

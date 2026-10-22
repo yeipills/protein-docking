@@ -47,6 +47,10 @@ def calculate_centroids(
 
     logger.info(f"Extracted {len(vertices)} vertex coordinates (vectorized)")
 
+    if len(arr_face) == 0:
+        logger.info("No faces to process")
+        return [], []
+
     # Convert face data to numpy
     face_array = np.array(arr_face, dtype=object)
 

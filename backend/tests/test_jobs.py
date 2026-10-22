@@ -22,7 +22,7 @@ class TestListJobs:
         """Test unauthenticated request fails"""
         response = client.get("/api/v1/jobs/")
 
-        assert response.status_code == status.HTTP_403_FORBIDDEN
+        assert response.status_code == status.HTTP_401_UNAUTHORIZED
 
     def test_list_jobs_pagination(self, client, auth_headers, db_session, test_user):
         """Test job listing with pagination"""

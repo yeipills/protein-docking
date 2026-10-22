@@ -140,7 +140,7 @@ class TestTokenRefresh:
         """Test refresh without token fails"""
         response = client.post("/api/v1/auth/refresh")
 
-        assert response.status_code == status.HTTP_403_FORBIDDEN
+        assert response.status_code == status.HTTP_401_UNAUTHORIZED
 
     def test_refresh_with_access_token_instead(self, client, user_token):
         """Test using access token for refresh fails"""

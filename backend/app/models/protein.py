@@ -11,8 +11,8 @@ class Protein(Base):
     __tablename__ = "proteins"
     __table_args__ = (
         # Composite indexes for common queries
-        Index('idx_user_created', 'user_id', 'created_at'),  # List user proteins sorted by date
-        Index('idx_user_name', 'user_id', 'name'),  # Search user proteins by name
+        Index('idx_proteins_user_created', 'user_id', 'created_at'),  # List user proteins sorted by date
+        Index('idx_proteins_user_name', 'user_id', 'name'),  # Search user proteins by name
     )
 
     id = Column(Integer, primary_key=True, index=True)

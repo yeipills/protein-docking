@@ -63,6 +63,10 @@ def client(db_session):
 
     app.dependency_overrides[get_db] = override_get_db
 
+    # Rate limit counters are in-memory and global; start each test clean
+    from app.core.rate_limit import limiter
+    limiter.reset()
+
     with TestClient(app) as test_client:
         yield test_client
 
@@ -120,7 +124,7 @@ def user_token(test_user):
     """
     Create an access token for the test user.
     """
-    return create_access_token(subject=test_user.id)
+    return create_access_token({"user_id": test_user.id, "username": test_user.username})
 
 
 @pytest.fixture
@@ -128,7 +132,7 @@ def admin_token(test_superuser):
     """
     Create an access token for the test superuser.
     """
-    return create_access_token(subject=test_superuser.id)
+    return create_access_token({"user_id": test_superuser.id, "username": test_superuser.username})
 
 
 @pytest.fixture
@@ -243,7 +247,7 @@ def user_data():
         "email": "newuser@example.com",
         "username": "newuser",
         "full_name": "New User",
-        "password": "securepass123",
+        "password": "SecurePass123!",
     }
 
 

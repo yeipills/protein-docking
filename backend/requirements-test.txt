@@ -10,7 +10,7 @@ pytest-env==1.1.5
 pytest-xdist==3.6.1  # Parallel testing
 
 # HTTP Testing
-httpx==0.28.0  # Already in main requirements but needed for testing
+httpx==0.28.1  # Already in main requirements but needed for testing
 
 # Test Data Generation
 faker==30.8.2

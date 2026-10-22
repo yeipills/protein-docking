@@ -15,6 +15,7 @@ alembic==1.14.0
 # Authentication & Security
 python-jose[cryptography]==3.5.0
 passlib[bcrypt]==1.7.4
+bcrypt==4.0.1  # passlib 1.7.4 is incompatible with bcrypt>=4.1
 python-dotenv==1.0.1
 pydantic[email]==2.10.2
 pydantic-settings==2.6.1
@@ -33,7 +34,7 @@ python-magic==0.4.27
 
 # HTTP & Networking
 requests==2.32.4  # Fixed CVE-2024-47081 (netrc leak)
-httpx==0.28.0
+httpx==0.28.1
 
 # WebSocket - CRITICAL UPDATES
 flask==3.1.1  # Fixed CVE-2025-47278 (key rotation)
