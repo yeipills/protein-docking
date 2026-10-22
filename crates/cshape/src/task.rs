@@ -9,7 +9,8 @@ use crate::pipeline::Spec;
 #[serde(tag = "kind", rename_all = "lowercase")]
 pub enum Task {
     Shapes(Spec),
-    Dock(DockSpec),
+    // Boxed: docking parameters are much larger than the context-shape spec.
+    Dock(Box<DockSpec>),
 }
 
 impl Task {

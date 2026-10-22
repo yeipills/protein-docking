@@ -763,7 +763,7 @@ async fn create_dock_job(
         };
         let spec = build_dock_spec(opts, &fallback)?;
         check_dock_inputs(input.clone()).await?;
-        st.jobs.submit(&id, &Task::Dock(spec))?;
+        st.jobs.submit(&id, &Task::Dock(Box::new(spec)))?;
         Ok(())
     }
     .await;
@@ -781,12 +781,12 @@ struct Complex {
     has_native: bool,
 }
 
+/// Unbound receptor and ligand, and the bound pair when present.
+type ComplexFiles = (PathBuf, PathBuf, Option<(PathBuf, PathBuf)>);
+
 /// A complex is a directory `<complexes>/<name>` with `<name>_r_u.pdb` and `<name>_l_u.pdb`,
 /// and optionally the bound pair `<name>_r_b.pdb` / `<name>_l_b.pdb` (Docking Benchmark naming).
-fn complex_files(
-    dir: &FsPath,
-    name: &str,
-) -> Option<(PathBuf, PathBuf, Option<(PathBuf, PathBuf)>)> {
+fn complex_files(dir: &FsPath, name: &str) -> Option<ComplexFiles> {
     if name.contains('/') || name.contains('\\') || name.starts_with('.') {
         return None;
     }
@@ -842,7 +842,7 @@ async fn create_complex_dock_job(
         tokio::fs::copy(rb, input.join(INPUT_NATIVE_RECEPTOR)).await?;
         tokio::fs::copy(lb, input.join(INPUT_NATIVE_LIGAND)).await?;
     }
-    st.jobs.submit(&id, &Task::Dock(spec))?;
+    st.jobs.submit(&id, &Task::Dock(Box::new(spec)))?;
     let job = st.jobs.db.get(&id)?.ok_or_else(ApiError::not_found)?;
     Ok((StatusCode::CREATED, Json(job)))
 }
